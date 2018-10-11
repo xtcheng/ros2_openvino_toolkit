@@ -116,11 +116,9 @@ int main(int argc, char* argv[]) {
     // --------------------------- 3. Generate Inference
     // Instance-----------------------------------
     // generate face detection inference
-    slog::info << "Model Location: " << FLAGS_m << slog::endl;
     auto model =
         std::make_shared<Models::ObjectDetectionModel>(FLAGS_m, 1, 1, 1);
     model->modelInit();
-    slog::info << "Pass!" << slog::endl;
     auto engine = std::make_shared<Engines::Engine>(*plugin, model);
     auto object_detection_ptr =
         std::make_shared<dynamic_vino_lib::ObjectDetection>(FLAGS_t);
