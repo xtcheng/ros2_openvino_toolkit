@@ -62,6 +62,13 @@ class RosTopicOutput : public BaseOutput {
     const std::string& input_type) override;
   /**
    * @brief Generate ros topic infomation according to
+   * the object detection result.
+   * @param[in] results a bundle of object detection results.
+   */
+  void accept(
+    const std::vector<dynamic_vino_lib::ObjectDetectionResult>& results) override;
+  /**
+   * @brief Generate ros topic infomation according to
    * the face detection result.
    * @param[in] An face detection result objetc.
    */
@@ -91,6 +98,9 @@ class RosTopicOutput : public BaseOutput {
   const std::string topic_name_;
   cv::Mat frame_;
   std::shared_ptr<rclcpp::Node> node_;
+
+  rclcpp::Publisher<object_msgs::msg::ObjectsInBoxes>::SharedPtr pub_object_;
+  std::shared_ptr<object_msgs::msg::ObjectsInBoxes> objects_topic_;  
   rclcpp::Publisher<object_msgs::msg::ObjectsInBoxes>::SharedPtr pub_face_;
   std::shared_ptr<object_msgs::msg::ObjectsInBoxes> faces_topic_;
   rclcpp::Publisher<people_msgs::msg::EmotionsStamped>::SharedPtr pub_emotion_;
