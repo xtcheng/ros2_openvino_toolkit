@@ -38,25 +38,29 @@ bool Input::RealSenseCameraTopic::initialize() {
       "/camera/color/image_raw",
       std::bind(&RealSenseCameraTopic::cb, this, std::placeholders::_1));
 
-  image_count = 0;
+  read_counter_ = 0;
+  store_counter_ = 0;
+  images_.resize(kBufferedImageNum);
   return true;
 }
 
 void Input::RealSenseCameraTopic::cb(const sensor_msgs::msg::Image::SharedPtr image_msg) {
   slog::info << "Receiving a new image from Camera topic." << slog::endl;
-  image = cv_bridge::toCvCopy(image_msg, "bgr8")->image;
-  ++image_count;
+  if (store_counter_ != read_counter_ || images_[store_counter_].empty()){
+    images_[store_counter_] = cv_bridge::toCvCopy(image_msg, "bgr8")->image;
+    store_counter_ = (store_counter_+1) % kBufferedImageNum;
+  }
 }
 
 bool Input::RealSenseCameraTopic::read(cv::Mat* frame) {
   
-  if (image.empty() || image_count <= 0){
+  if (images_[read_counter_].empty()){
     slog::warn << "No data received in CameraTopic instance" << slog::endl;
     return false;
   }
 
-  *frame = image;
-  --image_count;
+  *frame = images_[read_counter_];
+  read_counter_ = (read_counter_ + 1) % kBufferedImageNum;
   
   return true;
 }
