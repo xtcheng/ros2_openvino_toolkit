@@ -48,8 +48,9 @@ class RealSenseCameraTopic : public BaseInputDevice, public rclcpp::Node{
   const int kBufferedImageNum = 2;
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr sub_;
   std::vector<cv::Mat> images_;
-  int read_counter_;
-  int store_counter_;
+  volatile int read_counter_;
+  volatile int store_counter_;
+  volatile int image_count_;
 
   void cb(const sensor_msgs::msg::Image::SharedPtr image_msg);
 };
