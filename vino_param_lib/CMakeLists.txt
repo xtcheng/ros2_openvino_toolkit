@@ -17,7 +17,6 @@ project(vino_param_lib)
 
 find_package(ament_cmake REQUIRED)
 find_package(rviz_yaml_cpp_vendor REQUIRED)
-find_package(dynamic_vino_lib REQUIRED)
 
 include_directories(include
   ${rviz_yaml_cpp_vendor_DIR}/../../../opt/rviz_yaml_cpp_vendor/include)
@@ -28,7 +27,6 @@ add_library(${PROJECT_NAME} SHARED
 
 ament_target_dependencies(${PROJECT_NAME}
   "rviz_yaml_cpp_vendor"
-  "dynamic_vino_lib"
   )
 
 if(BUILD_TESTING)
