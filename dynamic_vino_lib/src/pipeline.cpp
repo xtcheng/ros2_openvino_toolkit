@@ -35,16 +35,23 @@ Pipeline::Pipeline(const std::string& name) {
 
 bool Pipeline::add(const std::string& name,
                    std::shared_ptr<Input::BaseInputDevice> input_device) {
+  if (name.empty()) {
+    slog::err << "Item name can't be empty!" << slog::endl;
+    return false;
+  }
   input_device_name_ = name;
   input_device_ = std::move(input_device);
-  next_.insert({"", name});
+
+  addConnect("", name);
   return true;
 }
 
 bool Pipeline::add(const std::string& parent, const std::string& name,
                    std::shared_ptr<Outputs::BaseOutput> output) {
-  if (parent.empty()) {
-    slog::err << "output device have no parent!" << slog::endl;
+  
+  //TODO: to be updated with calling add(name, output);
+  if (parent.empty() || name.empty()) {
+    slog::err << "Item name can't be empty!" << slog::endl;
     return false;
   }
   if (name_to_detection_map_.find(parent) == name_to_detection_map_.end()) {
@@ -64,35 +71,89 @@ bool Pipeline::add(const std::string& parent, const std::string& name,
 }
 
 bool Pipeline::add(const std::string& parent, const std::string& name) {
-  if (parent.empty()) {
-    slog::err << "output device should have no parent!" << slog::endl;
-    return false;
+
+  if (isLegalConnect(parent, name)) {
+    addConnect(parent, name);
+    return true;
   }
-  if (name_to_detection_map_.find(parent) == name_to_detection_map_.end()) {
-    slog::err << "parent detection does not exists!" << slog::endl;
-    return false;
-  }
-  if (std::find(output_names_.begin(), output_names_.end(), name) ==
-      output_names_.end()) {
-    slog::err << "output does not exists!" << slog::endl;
-    return false;
+
+  return false;
+}
+
+bool Pipeline::add(const std::string& name,
+                   std::shared_ptr<Outputs::BaseOutput> output) {
+  //TODO: to be added
+}
+
+void Pipeline::addConnect(const std::string& parent, const std::string& name) {
+  std::pair <std::multimap<std::string, std::string>::iterator, std::multimap<std::string, std::string>::iterator> ret;
+  ret = next_.equal_range(parent);
+  
+  for (std::multimap<std::string, std::string>::iterator it=ret.first; it!=ret.second; ++it){
+    if(it->second == name) {
+      slg::warn << "The connect [" << parent << "<-->" << name << "] already exists." << slog::endl;
+      return;
+    }
   }
   next_.insert({parent, name});
-  return true;
 }
 
 bool Pipeline::add(const std::string& parent, const std::string& name,
                    std::shared_ptr<dynamic_vino_lib::BaseInference> inference) {
-  if (name_to_detection_map_.find(parent) == name_to_detection_map_.end() &&
-      input_device_name_ != parent) {
-    slog::err << "parent device/detection does not exists!" << slog::endl;
+  if (parent.empty() || name.empty() || !isLegalConnect(parent, name)) {
+    slog::err << "ARGuments ERROR when add inference instance!" << slog::endl;
     return false;
   }
-  next_.insert({parent, name});
-  name_to_detection_map_[name] = std::move(inference);
-  ++total_inference_;
+  
+  if(add(name, inference) {
+    addConnect(parent, name);
+    return true;
+  }
+  
+  return false;
+}
+
+bool Pipeline::add(const std::string& name,
+                   std::shared_ptr<dynamic_vino_lib::BaseInference> inference) {
+  if (name.empty()) {
+    slog::err << "Item name can't be empty!" << slog::endl;
+    return false;
+  }
+  
+  name_to_detection_map_::iterator it = name_to_detection_map_.find(name);
+  if (it != name_to_detection_map_.end()) {
+    slog::warn << "inferance instance for [" << name << 
+                  "] already exists, update it with new instance." << slog::endl;
+  } else {
+    name_to_detection_map_[name] = std::move(inference);
+    ++total_inference_;
+  }
+  
   return true;
 }
+
+bool Pipeline::isLegalConnect(const std::string parent, const std::string child){
+  int parent_order = getCatagoryOrder(parent);
+  int child_order = getCatagoryOrder(child);
+  
+  return (parent_order != kCatagoryOrder_Unknown) && 
+         (child_order != kCatagoryOrder_Unknown) && (parent_order <= child_order);
+}
+
+int Pipeline::getCatagoryOrder(const std::string name) {
+
+  int order = kCatagoryOrder_Unknown;
+  if (name == input_device_name_) {
+    order = kCatagoryOrder_Input;
+  } else if (name_to_detection_map_.find(name) != name_to_detection_map_.end()) {
+    order = kCatagoryOrder_Inference;
+  } else if (name_to_output_map_.find(name) != name_to_output_map_.end()) {
+    order = kCatagoryOrder_Output;
+  }
+  
+  return order;
+}
+
 
 void Pipeline::runOnce(const std::string& input_type) {
   initInferenceCounter();

@@ -29,11 +29,11 @@
 #include <set>
 #include <string>
 
+#include <vino_param_lib/param_manager.hpp>
 #include "dynamic_vino_lib/inferences/base_inference.hpp"
 #include "dynamic_vino_lib/inputs/standard_camera.hpp"
 #include "dynamic_vino_lib/outputs/base_output.hpp"
 #include "opencv2/opencv.hpp"
-#include "vino_param_lib/param_manager.hpp"
 
 /**
  * @class PipelineParams
@@ -48,11 +48,19 @@ class PipelineParams {
       const std::string& name);
   PipelineParams& operator=(const Params::ParamManager::PipelineParams& params);
   void update();
+  void update(const Params::ParamManager::PipelineParams& params);
   bool isOutputTo(std::string& name);
   bool isGetFps();
 
   const std::string kInputType_Image = "Image";
+  const std::string kInputType_Video = "Video";
+  const std::string kInputType_StandardCamera = "StandardCamera";
+  const std::string kInputType_CameraTopic = "RealSenseCameraTopic";
+  const std::string kInputType_RealSenseCamera = "RealSenseCamera";
+  
   const std::string kOutputTpye_RViz = "RViz";
+  const std::string kOutputTpye_ImageWindow = "ImageWindow";
+  const std::string kOutputTpye_RosTopic = "RosTopic";
 
  private:
   Params::ParamManager::PipelineParams params_;

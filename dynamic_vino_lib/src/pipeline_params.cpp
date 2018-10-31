@@ -55,6 +55,12 @@ void PipelineParams::update() {
   }
 }
 
+void PipelineParams::update(const Params::ParamManager::PipelineParams& params) {
+  if (!params.name.empty()) {
+    params_ = params;
+  }
+}
+
 bool PipelineParams::isOutputTo(std::string& output) {
   if (std::find(params_.outputs.begin(), params_.outputs.end(), output) !=
       params_.outputs.end()) {

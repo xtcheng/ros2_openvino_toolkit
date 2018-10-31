@@ -103,6 +103,11 @@ class Pipeline {
   void increaseInferenceCounter();
   void decreaseInferenceCounter();
   
+  const int kCatagoryOrder_Unknown = -1;
+  const int kCatagoryOrder_Input = 1;
+  const int kCatagoryOrder_Inference = 2;
+  const int kCatagoryOrder_Output = 3;
+  
   std::shared_ptr<PipelineParams> params_;
 
   std::shared_ptr<Input::BaseInputDevice> input_device_;
