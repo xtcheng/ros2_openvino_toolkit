@@ -24,10 +24,12 @@
 #include <string>
 
 #include "dynamic_vino_lib/pipeline.hpp"
+#include "dynamic_vino_lib/pipeline_manager.hpp"
 #include <vino_param_lib/param_manager.hpp>
 #include "dynamic_vino_lib/pipeline_params.hpp"
 
-std::shared_ptr<Pipeline>
+
+std::shared_ptr<Pipeline> 
 PipelineManager::createPipeline(const Params::ParamManager::PipelineParams& params) {
   if (params.name == ""){
     throw std::logic_error("The name of pipeline won't be empty!");
@@ -45,11 +47,26 @@ PipelineManager::createPipeline(const Params::ParamManager::PipelineParams& para
     pipeline->add(it->first, it->second);
   }
   
+  auto outputs = parseOutput(params);
+  for (auto it=outputs.begin(); it != outputs.end(); ++it) {
+    pipeline->add(it->first, it->second);
+  }
   
+  auto infers = parseInference(params);
+  for (auto it=infers.begin(); it != infers.end(); ++it) {
+    pipeline->add(it->first, it->second);
+  }
   
+  for (auto it=params.connects.begin(); it != params.connects.end(); ++it) {
+    pipeline->add(it->first, it->second);
+  }
   
-  
-  
+  PipelineData data;
+  data.pipeline = pipeline;
+  data.params = params;
+  data.state = PipelineState_Idle;
+
+  return pipeline;
 }
 
 std::map<std::string, std::shared_ptr<Input::BaseInputDevice> >
@@ -84,32 +101,138 @@ PipelineManager::parseInputDevice(const Params::ParamManager::PipelineParams& pa
 }
 
 std::map<std::string, std::shared_ptr<Outputs::BaseOutput> >
-PipelineManager::parseInputDevice(const Params::ParamManager::PipelineParams& params) {
+PipelineManager::parseOutput(const Params::ParamManager::PipelineParams& params) {
 
   std::map<std::string, std::shared_ptr<Outputs::BaseOutput> > outputs;
   for (auto& name : params.outputs) {
     std::cout << "Parsing Output: " << name << std::endl;
     std::shared_ptr<Outputs::BaseOutput> object = nullptr;
-    if (name == PipelineParams::kInputType_RealSenseCamera) {
-      device = std::make_unique<Input::RealSenseCamera>();
-    } else if (name == PipelineParams::kInputType_StandardCamera) {
-      device = std::make_unique<Input::StandardCamera>();
-    } else if (name == PipelineParams::kInputType_CameraTopic) {
-      device = std::make_unique<Input::RealSenseCameraTopic>();
-    } else if (name == PipelineParams::kInputType_Video) {
-      if (params.input_meta != "") {
-        device = std::make_unique<Input::Video>(params.input_meta);
-      }
-    } else if (name == PipelineParams::kInputType_Image) {
-      if (params.input_meta != "") {
-        device = std::make_unique<Input::Image>(params.input_meta);
-      }
+    if (name == PipelineParams::kOutputTpye_RViz || 
+      name == PipelineParams::kOutputTpye_RosTopic) {
+      object = std::make_shared<Outputs::RosTopicOutput>();
+    } else if (name == PipelineParams::kOutputTpye_ImageWindow) {
+      object = std::make_shared<Outputs::ImageWindowOutput>("Results");
     }
     
-    if (device != nullptr) {
-      outputs.insert({d, device});
+    if (object != nullptr) {
+      outputs.insert({name, device});
     }
   }
+
+  return outputs;
+}
+
+std::map<std::string, std::shared_ptr<dynamic_vino_lib::BaseInference>>
+PipelineManager::parseInference(const Params::ParamManager::PipelineParams& params) {
+
+  /**< update plugins for devices >**/
+  auto pcommon = Params::ParamManager::getInstance().getCommon();
+  std::string FLAGS_l = pcommon.custom_cpu_library;
+  std::string FLAGS_c = pcommon.custom_cldnn_library;
+  bool FLAGS_pc = pcommon.enable_performance_count;
   
-  return inputs;
+  std::map<std::string, std::shared_ptr<dynamic_vino_lib::BaseInference>> inferences;
+  for (auto& infer : params.infers) {
+
+    if(infer.name.empty() || infer.model.empty()) {
+      continue;
+    }
+    std::cout << "Parsing Inference: " << infer << std::endl;
+    std::shared_ptr<dynamic_vino_lib::BaseInference> object = nullptr;
+    if (plugins_for_devices_.find(infer.engine) == plugins_for_devices_.end()) {
+      plugins_for_devices_[infer.engine] =
+          *Factory::makePluginByName(infer.engine, FLAGS_l, FLAGS_c, FLAGS_pc);
+    }
+      
+    if (infer.name == PipelineParams::kInferTpye_FaceDetection) {
+      object = createFaceDetection(infer);
+      
+    } else if (name == PipelineParams::kInferTpye_AgeGenderRecognition) {
+      object = createAgeGenderRecognition(infer);
+      
+    } else if (name == PipelineParams::kInferTpye_EmotionRecognition) {
+      object = createEmotionRecognition(infer);
+      
+    } else if (name == PipelineParams::kInferTpye_HeadPoseEstimation) {
+      object = createHeadPoseEstimation(infer);
+      
+    } else if (name == PipelineParams::kInferTpye_ObjectDetection) {
+      object = createObjectDetection(infer);
+    }
+    
+    if (object != nullptr) {
+      inferences.insert({infer.name, object});
+    }
+  }
+
+  return inferences;
+}
+
+std::shared_ptr<dynamic_vino_lib::BaseInference>
+PipelineManager::createFaceDetection(const Params::ParamManager::InferenceParams& infer) {
+  //TODO: add batch size in param_manager
+  auto face_detection_model =
+        std::make_shared<Models::FaceDetectionModel>(infer.model, 1, 1, 1);
+  face_detection_model->modelInit();
+  auto face_detection_engine = std::make_shared<Engines::Engine>(
+        plugins_for_devices_[infer.engine], face_detection_model);
+  auto face_inference_ptr =
+        std::make_shared<dynamic_vino_lib::FaceDetection>(0.5);//TODO: add output_threshold in param_manager
+  face_inference_ptr->loadNetwork(face_detection_model);
+  face_inference_ptr->loadEngine(face_detection_engine);
+  
+  return face_inference_ptr;
+}
+
+std::shared_ptr<dynamic_vino_lib::BaseInference>
+PipelineManager::createAgeGenderRecognition(const Params::ParamManager::InferenceParams& infer) {
+  auto model =
+        std::make_shared<Models::AgeGenderDetectionModel>(infer.model, 1, 2, 16);
+  model->modelInit();
+  auto engine = std::make_shared<Engines::Engine>(
+        plugins_for_devices_[infer.engine], model);
+  auto infer =
+        std::make_shared<dynamic_vino_lib::AgeGenderDetection>();
+  infer->loadNetwork(model);
+  infer->loadEngine(engine);
+  
+  return infer;
+}
+
+std::shared_ptr<dynamic_vino_lib::BaseInference>
+PipelineManager::createEmotionRecognition(const Params::ParamManager::InferenceParams& infer) {
+  auto model =
+        std::make_shared<Models::EmotionDetectionModel>(infer.model, 1, 1, 16);
+  model->modelInit();
+  auto engine = std::make_shared<Engines::Engine>(
+        plugins_for_devices_[infer.engine], model);
+  auto infer =
+        std::make_shared<dynamic_vino_lib::EmotionDetection>();
+  infer->loadNetwork(model);
+  infer->loadEngine(engine);
+  
+  return infer;
+}
+
+std::shared_ptr<dynamic_vino_lib::BaseInference>
+PipelineManager::createHeadPoseEstimation(const Params::ParamManager::InferenceParams& infer) {
+  auto model =
+        std::make_shared<Models::HeadPoseDetectionModel>(infer.model, 1, 3, 16);
+  model->modelInit();
+  auto engine = std::make_shared<Engines::Engine>(
+        plugins_for_devices_[infer.engine], model);
+  auto infer =
+        std::make_shared<dynamic_vino_lib::HeadPoseDetection>();
+  infer->loadNetwork(model);
+  infer->loadEngine(engine);
+
+  return infer;
+}
+
+std::shared_ptr<dynamic_vino_lib::BaseInference>
+PipelineManager::createObjectDetection(const Params::ParamManager::InferenceParams& infer) {
+  //TODO: not implemented yet
+  
+  
+  return createFaceDetection(infer);
 }

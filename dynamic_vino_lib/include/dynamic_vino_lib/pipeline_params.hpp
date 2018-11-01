@@ -62,6 +62,11 @@ class PipelineParams {
   const std::string kOutputTpye_ImageWindow = "ImageWindow";
   const std::string kOutputTpye_RosTopic = "RosTopic";
 
+  const std::string kInferTpye_FaceDetection = "FaceDetection";
+  const std::string kInferTpye_AgeGenderRecognition = "AgeGenderRecognition";
+  const std::string kInferTpye_EmotionRecognition = "EmotionRecognition";
+  const std::string kInferTpye_HeadPoseEstimation = "HeadPoseEstimation";
+  const std::string kInferTpye_ObjectDetection = "ObjectDetection";
  private:
   Params::ParamManager::PipelineParams params_;
 };

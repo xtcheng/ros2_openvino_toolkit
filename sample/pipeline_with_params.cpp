@@ -101,6 +101,7 @@ int main(int argc, char* argv[]) {
     if (pipelines.size() < 1) {
       throw std::logic_error("Pipeline parameters should be set!");
     }
+    
     FLAGS_l = pcommon.custom_cpu_library;
     FLAGS_c = pcommon.custom_cldnn_library;
     FLAGS_pc = pcommon.enable_performance_count;

@@ -46,7 +46,7 @@ class PipelineManager {
   static PipelineManager& getInstance() {
     static PipelineManager manager_;
     return manager_;
-  }
+  };
   
   std::shared_ptr<Pipeline> createPipeline(const Params::ParamManager::PipelineParams& params);
   void removePipeline(const std::string& name);
@@ -57,15 +57,16 @@ class PipelineManager {
     Params::ParamManager::PipelineParams params;
     std::shared_ptr<Pipeline> pipeline;
     PipelineState state;
-  }
+  };
 
  private:
-  PipelineManager() {}
+  PipelineManager() {};
   PipelineManager(PipelineManager const&);
   void operator=(PipelineManager const&);
 
   std::map<std::string, PipelineData> pipelines_;
+  std::map<std::string, InferenceEngine::InferencePlugin> plugins_for_devices_;
 
-}
+};
 
 #endif // DYNAMIC_VINO_LIB__PIPELINE_MANAGER_HPP_

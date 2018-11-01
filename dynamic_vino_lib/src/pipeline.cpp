@@ -48,26 +48,21 @@ bool Pipeline::add(const std::string& name,
 
 bool Pipeline::add(const std::string& parent, const std::string& name,
                    std::shared_ptr<Outputs::BaseOutput> output) {
-  
-  //TODO: to be updated with calling add(name, output);
-  if (parent.empty() || name.empty()) {
-    slog::err << "Item name can't be empty!" << slog::endl;
+  if (parent.empty() || name.empty() || !isLegalConnect(parent, name) ||
+    output == nullptr ) {
+    slog::err << "ARGuments ERROR when adding output instance!" << slog::endl;
     return false;
   }
-  if (name_to_detection_map_.find(parent) == name_to_detection_map_.end()) {
-    slog::err << "parent detection does not exists!" << slog::endl;
-    return false;
-  }
-  if (output_names_.find(name) != output_names_.end()) {
-    return add(parent, name);
-  }
-  output_names_.insert(name);
-  name_to_output_map_[name] = std::move(output);
-  next_.insert({parent, name});
   
-  /**< Add pipeline instance to Output instance >**/
-  output->setPipeline(this);
-  return true;
+  if(add(name, output)) {
+    addConnect(parent, name);
+    output_names_.insert(name);
+    /**< Add pipeline instance to Output instance >**/
+    output->setPipeline(this);
+    return true;
+  }
+  
+  return false;
 }
 
 bool Pipeline::add(const std::string& parent, const std::string& name) {
@@ -82,7 +77,19 @@ bool Pipeline::add(const std::string& parent, const std::string& name) {
 
 bool Pipeline::add(const std::string& name,
                    std::shared_ptr<Outputs::BaseOutput> output) {
-  //TODO: to be added
+    if (name.empty()) {
+    slog::err << "Item name can't be empty!" << slog::endl;
+    return false;
+  }
+  
+  std::map<std::string, std::shared_ptr<Outputs::BaseOutput>>::iterator it = name_to_output_map_.find(name);
+  if (it != name_to_output_map_.end()) {
+    slog::warn << "inferance instance for [" << name << 
+                  "] already exists, update it with new instance." << slog::endl;
+  }
+  name_to_output_map_[name] = output;
+  
+  return true;
 }
 
 void Pipeline::addConnect(const std::string& parent, const std::string& name) {
@@ -91,7 +98,7 @@ void Pipeline::addConnect(const std::string& parent, const std::string& name) {
   
   for (std::multimap<std::string, std::string>::iterator it=ret.first; it!=ret.second; ++it){
     if(it->second == name) {
-      slg::warn << "The connect [" << parent << "<-->" << name << "] already exists." << slog::endl;
+      slog::warn << "The connect [" << parent << "<-->" << name << "] already exists." << slog::endl;
       return;
     }
   }
@@ -101,11 +108,11 @@ void Pipeline::addConnect(const std::string& parent, const std::string& name) {
 bool Pipeline::add(const std::string& parent, const std::string& name,
                    std::shared_ptr<dynamic_vino_lib::BaseInference> inference) {
   if (parent.empty() || name.empty() || !isLegalConnect(parent, name)) {
-    slog::err << "ARGuments ERROR when add inference instance!" << slog::endl;
+    slog::err << "ARGuments ERROR when adding inference instance!" << slog::endl;
     return false;
   }
   
-  if(add(name, inference) {
+  if(add(name, inference)) {
     addConnect(parent, name);
     return true;
   }
@@ -120,15 +127,15 @@ bool Pipeline::add(const std::string& name,
     return false;
   }
   
-  name_to_detection_map_::iterator it = name_to_detection_map_.find(name);
+  std::map<std::string, std::shared_ptr<dynamic_vino_lib::BaseInference>>::iterator it = name_to_detection_map_.find(name);
   if (it != name_to_detection_map_.end()) {
     slog::warn << "inferance instance for [" << name << 
                   "] already exists, update it with new instance." << slog::endl;
   } else {
-    name_to_detection_map_[name] = std::move(inference);
     ++total_inference_;
   }
-  
+  name_to_detection_map_[name] = std::move(inference);
+
   return true;
 }
 
