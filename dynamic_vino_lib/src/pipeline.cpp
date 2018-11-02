@@ -29,7 +29,9 @@
 using namespace InferenceEngine;
 
 Pipeline::Pipeline(const std::string& name) {
-  params_ = std::make_shared<PipelineParams>(name);
+  if(!name.empty()) {
+    params_ = std::make_shared<PipelineParams>(name);
+  }
   counter_ = 0;
 }
 

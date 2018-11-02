@@ -16,7 +16,7 @@
 
 /**
  * @brief a header file with declaration of Pipeline class
- * @file pipeline_param.hpp
+ * @file pipeline_params.hpp
  */
 #ifndef DYNAMIC_VINO_LIB__PIPELINE_PARAM_HPP_
 #define DYNAMIC_VINO_LIB__PIPELINE_PARAM_HPP_
@@ -35,6 +35,22 @@
 #include "dynamic_vino_lib/outputs/base_output.hpp"
 #include "opencv2/opencv.hpp"
 
+extern const std::string kInputType_Image;
+extern const std::string kInputType_Video;
+extern const std::string kInputType_StandardCamera;
+extern const std::string kInputType_CameraTopic;
+extern const std::string kInputType_RealSenseCamera;
+
+extern const std::string kOutputTpye_RViz;
+extern const std::string kOutputTpye_ImageWindow;
+extern const std::string kOutputTpye_RosTopic;
+
+extern const std::string kInferTpye_FaceDetection;
+extern const std::string kInferTpye_AgeGenderRecognition;
+extern const std::string kInferTpye_EmotionRecognition;
+extern const std::string kInferTpye_HeadPoseEstimation;
+extern const std::string kInferTpye_ObjectDetection;
+
 /**
  * @class PipelineParams
  * @brief This class is a pipeline parameter management that stores parameters
@@ -52,21 +68,6 @@ class PipelineParams {
   bool isOutputTo(std::string& name);
   bool isGetFps();
 
-  const std::string kInputType_Image = "Image";
-  const std::string kInputType_Video = "Video";
-  const std::string kInputType_StandardCamera = "StandardCamera";
-  const std::string kInputType_CameraTopic = "RealSenseCameraTopic";
-  const std::string kInputType_RealSenseCamera = "RealSenseCamera";
-  
-  const std::string kOutputTpye_RViz = "RViz";
-  const std::string kOutputTpye_ImageWindow = "ImageWindow";
-  const std::string kOutputTpye_RosTopic = "RosTopic";
-
-  const std::string kInferTpye_FaceDetection = "FaceDetection";
-  const std::string kInferTpye_AgeGenderRecognition = "AgeGenderRecognition";
-  const std::string kInferTpye_EmotionRecognition = "EmotionRecognition";
-  const std::string kInferTpye_HeadPoseEstimation = "HeadPoseEstimation";
-  const std::string kInferTpye_ObjectDetection = "ObjectDetection";
  private:
   Params::ParamManager::PipelineParams params_;
 };

@@ -23,11 +23,11 @@
 
 #include <atomic>
 #include <future>
+#include <map>
 #include <memory>
 #include <mutex>
-#include <string>
 #include <set>
-#include <map>
+#include <string>
 
 #include <vino_param_lib/param_manager.hpp>
 #include "dynamic_vino_lib/pipeline.hpp"
@@ -38,21 +38,28 @@
  */
 class PipelineManager {
  public:
-   /**
-   * @brief Get the singleton instance of PipelineManager class.
-   * The instance will be created when first call.
-   * @return The reference of PipelineManager instance.
-   */
+  /**
+  * @brief Get the singleton instance of PipelineManager class.
+  * The instance will be created when first call.
+  * @return The reference of PipelineManager instance.
+  */
   static PipelineManager& getInstance() {
     static PipelineManager manager_;
     return manager_;
   };
-  
-  std::shared_ptr<Pipeline> createPipeline(const Params::ParamManager::PipelineParams& params);
+
+  std::shared_ptr<Pipeline> createPipeline(
+      const Params::ParamManager::PipelineParams& params);
   void removePipeline(const std::string& name);
-  PipelineManager& updatePipeline(const std::string& name, const Params::ParamManager::PipelineParams& params);
-  
-  enum PipelineState { PipelineState_Idle, PipelineState_Running, PipelineState_Error };
+  PipelineManager& updatePipeline(
+      const std::string& name,
+      const Params::ParamManager::PipelineParams& params);
+
+  enum PipelineState {
+    PipelineState_Idle,
+    PipelineState_Running,
+    PipelineState_Error
+  };
   struct PipelineData {
     Params::ParamManager::PipelineParams params;
     std::shared_ptr<Pipeline> pipeline;
@@ -60,13 +67,28 @@ class PipelineManager {
   };
 
  private:
-  PipelineManager() {};
+  PipelineManager(){};
   PipelineManager(PipelineManager const&);
   void operator=(PipelineManager const&);
+  std::map<std::string, std::shared_ptr<Input::BaseInputDevice>>
+  parseInputDevice(const Params::ParamManager::PipelineParams& params);
+  std::map<std::string, std::shared_ptr<Outputs::BaseOutput>> parseOutput(
+      const Params::ParamManager::PipelineParams& params);
+  std::map<std::string, std::shared_ptr<dynamic_vino_lib::BaseInference>>
+  parseInference(const Params::ParamManager::PipelineParams& params);
+  std::shared_ptr<dynamic_vino_lib::BaseInference> createFaceDetection(
+      const Params::ParamManager::InferenceParams& infer);
+  std::shared_ptr<dynamic_vino_lib::BaseInference> createAgeGenderRecognition(
+      const Params::ParamManager::InferenceParams& infer);
+  std::shared_ptr<dynamic_vino_lib::BaseInference> createEmotionRecognition(
+      const Params::ParamManager::InferenceParams& infer);
+  std::shared_ptr<dynamic_vino_lib::BaseInference> createHeadPoseEstimation(
+      const Params::ParamManager::InferenceParams& infer);
+  std::shared_ptr<dynamic_vino_lib::BaseInference> createObjectDetection(
+      const Params::ParamManager::InferenceParams& infer);
 
   std::map<std::string, PipelineData> pipelines_;
   std::map<std::string, InferenceEngine::InferencePlugin> plugins_for_devices_;
-
 };
 
-#endif // DYNAMIC_VINO_LIB__PIPELINE_MANAGER_HPP_
+#endif  // DYNAMIC_VINO_LIB__PIPELINE_MANAGER_HPP_

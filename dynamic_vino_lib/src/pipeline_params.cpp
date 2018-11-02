@@ -26,6 +26,22 @@
 #include <vino_param_lib/param_manager.hpp>
 #include "dynamic_vino_lib/pipeline_params.hpp"
 
+const std::string kInputType_Image = "Image";
+const std::string kInputType_Video = "Video";
+const std::string kInputType_StandardCamera = "StandardCamera";
+const std::string kInputType_CameraTopic = "RealSenseCameraTopic";
+const std::string kInputType_RealSenseCamera = "RealSenseCamera";
+
+const std::string kOutputTpye_RViz = "RViz";
+const std::string kOutputTpye_ImageWindow = "ImageWindow";
+const std::string kOutputTpye_RosTopic = "RosTopic";
+
+const std::string kInferTpye_FaceDetection = "FaceDetection";
+const std::string kInferTpye_AgeGenderRecognition = "AgeGenderRecognition";
+const std::string kInferTpye_EmotionRecognition = "EmotionRecognition";
+const std::string kInferTpye_HeadPoseEstimation = "HeadPoseEstimation";
+const std::string kInferTpye_ObjectDetection = "ObjectDetection";
+
 PipelineParams::PipelineParams(const std::string& name) { params_.name = name; }
 
 PipelineParams::PipelineParams(
@@ -55,7 +71,8 @@ void PipelineParams::update() {
   }
 }
 
-void PipelineParams::update(const Params::ParamManager::PipelineParams& params) {
+void PipelineParams::update(
+    const Params::ParamManager::PipelineParams& params) {
   if (!params.name.empty()) {
     params_ = params;
   }
