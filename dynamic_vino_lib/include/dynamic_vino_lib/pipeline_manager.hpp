@@ -54,15 +54,20 @@ class PipelineManager {
   PipelineManager& updatePipeline(
       const std::string& name,
       const Params::ParamManager::PipelineParams& params);
+  
+  void runAll();
 
   enum PipelineState {
-    PipelineState_Idle,
-    PipelineState_Running,
+    PipelineState_ThreadNotCreated,
+    PipelineState_ThreadStopped,
+    PipelineState_ThreadRunning,
     PipelineState_Error
   };
   struct PipelineData {
     Params::ParamManager::PipelineParams params;
     std::shared_ptr<Pipeline> pipeline;
+    std::vector<std::shared_ptr<rclcpp::Node>> spin_nodes;
+    std::shared_ptr<std::thread> thread;
     PipelineState state;
   };
 

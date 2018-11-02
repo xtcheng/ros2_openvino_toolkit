@@ -49,6 +49,7 @@ std::shared_ptr<Pipeline> PipelineManager::createPipeline(
   if (params.name == "") {
     throw std::logic_error("The name of pipeline won't be empty!");
   }
+  PipelineData data;
 
   std::shared_ptr<Pipeline> pipeline = std::make_shared<Pipeline>(params.name);
   pipeline->getParameters()->update(params);
@@ -61,6 +62,10 @@ std::shared_ptr<Pipeline> PipelineManager::createPipeline(
   }
   for (auto it = inputs.begin(); it != inputs.end(); ++it) {
     pipeline->add(it->first, it->second);
+    auto node = it->second->getHandler();
+    if(node != nullptr) {
+      data.spin_nodes.emplace_back(node); 
+    }
   }
 
   auto outputs = parseOutput(params);
@@ -80,7 +85,7 @@ std::shared_ptr<Pipeline> PipelineManager::createPipeline(
   PipelineData data;
   data.pipeline = pipeline;
   data.params = params;
-  data.state = PipelineState_Idle;
+  data.state = PipelineState_ThreadNotCreated;
 
   return pipeline;
 }
@@ -251,4 +256,32 @@ PipelineManager::createObjectDetection(
   // TODO: not implemented yet
 
   return createFaceDetection(infer);
+}
+
+void PipelineManager::threadPipeline(std::string& name) {
+  PipelineData& p = pipelines_(name);
+  while (p.state == PipelineState_ThreadRunning && p.pipeline != nullptr) {
+    for (auto& node : p.spin_nodes) {
+      rclcpp::spin_some(node);
+    }
+    p.pipeline->runOnce();
+  }
+}
+void PipelineManager::runAll() {
+  for (auto it = pipelines_.begin(); it != pipelines_.end(); ++it) {
+    if(it->second.state != PipelineState_ThreadRunning) {
+      it->second.state = PipelineState_ThreadRunning;
+    }
+    if(it->second.thread == nullptr) {
+      it->second.thread = std::make_shared<std::thread>(it->second.params.name);
+    }
+  }
+}
+
+void PipelineManager::joinAll() {
+  for (auto it = pipelines_.begin(); it != pipelines_.end(); ++it) {
+    if(it->second.thread != nullptr && it->second.state == PipelineState_ThreadRunning) {
+      it->second.thread->join();
+    }
+  }
 }

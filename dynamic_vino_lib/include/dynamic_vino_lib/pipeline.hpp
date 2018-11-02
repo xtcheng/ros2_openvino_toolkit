@@ -87,7 +87,7 @@ class Pipeline {
    * @brief Do the inference once.
    * Data flow from input device to inference network, then to output device.
    */
-  void runOnce(const std::string& input_type);
+  void runOnce();
   /**
    * @brief The callback function provided for all the inference network in the
    * pipeline.

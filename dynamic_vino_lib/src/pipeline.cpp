@@ -164,7 +164,7 @@ int Pipeline::getCatagoryOrder(const std::string name) {
 }
 
 
-void Pipeline::runOnce(const std::string& input_type) {
+void Pipeline::runOnce() {
   initInferenceCounter();
 
   if (!input_device_->read(&frame_)) {
