@@ -46,7 +46,7 @@
 #include "dynamic_vino_lib/pipeline_params.hpp"
 
 std::shared_ptr<Pipeline> PipelineManager::createPipeline(
-    const Params::ParamManager::PipelineParams& params) {
+    const Params::ParamManager::PipelineRawData& params) {
   if (params.name == "") {
     throw std::logic_error("The name of pipeline won't be empty!");
   }
@@ -97,7 +97,7 @@ std::shared_ptr<Pipeline> PipelineManager::createPipeline(
 
 std::map<std::string, std::shared_ptr<Input::BaseInputDevice>>
 PipelineManager::parseInputDevice(
-    const Params::ParamManager::PipelineParams& params) {
+    const Params::ParamManager::PipelineRawData& params) {
   std::map<std::string, std::shared_ptr<Input::BaseInputDevice>> inputs;
   for (auto& name : params.inputs) {
     slog::info << "Parsing InputDvice: " << name << slog::endl;
@@ -132,7 +132,7 @@ PipelineManager::parseInputDevice(
 
 std::map<std::string, std::shared_ptr<Outputs::BaseOutput>>
 PipelineManager::parseOutput(
-    const Params::ParamManager::PipelineParams& params) {
+    const Params::ParamManager::PipelineRawData& params) {
   std::map<std::string, std::shared_ptr<Outputs::BaseOutput>> outputs;
   for (auto& name : params.outputs) {
     slog::info << "Parsing Output: " << name << slog::endl;
@@ -157,7 +157,7 @@ PipelineManager::parseOutput(
 
 std::map<std::string, std::shared_ptr<dynamic_vino_lib::BaseInference>>
 PipelineManager::parseInference(
-    const Params::ParamManager::PipelineParams& params) {
+    const Params::ParamManager::PipelineRawData& params) {
   /**< update plugins for devices >**/
   auto pcommon = Params::ParamManager::getInstance().getCommon();
   std::string FLAGS_l = pcommon.custom_cpu_library;
@@ -206,7 +206,7 @@ PipelineManager::parseInference(
 
 std::shared_ptr<dynamic_vino_lib::BaseInference>
 PipelineManager::createFaceDetection(
-    const Params::ParamManager::InferenceParams& infer) {
+    const Params::ParamManager::InferenceRawData& infer) {
   // TODO: add batch size in param_manager
   auto face_detection_model =
       std::make_shared<Models::FaceDetectionModel>(infer.model, 1, 1, 1);
@@ -223,7 +223,7 @@ PipelineManager::createFaceDetection(
 
 std::shared_ptr<dynamic_vino_lib::BaseInference>
 PipelineManager::createAgeGenderRecognition(
-    const Params::ParamManager::InferenceParams& param) {
+    const Params::ParamManager::InferenceRawData& param) {
   auto model =
       std::make_shared<Models::AgeGenderDetectionModel>(param.model, 1, 2, 16);
   model->modelInit();
@@ -238,7 +238,7 @@ PipelineManager::createAgeGenderRecognition(
 
 std::shared_ptr<dynamic_vino_lib::BaseInference>
 PipelineManager::createEmotionRecognition(
-    const Params::ParamManager::InferenceParams& param) {
+    const Params::ParamManager::InferenceRawData& param) {
   auto model =
       std::make_shared<Models::EmotionDetectionModel>(param.model, 1, 1, 16);
   model->modelInit();
@@ -253,7 +253,7 @@ PipelineManager::createEmotionRecognition(
 
 std::shared_ptr<dynamic_vino_lib::BaseInference>
 PipelineManager::createHeadPoseEstimation(
-    const Params::ParamManager::InferenceParams& param) {
+    const Params::ParamManager::InferenceRawData& param) {
   auto model =
       std::make_shared<Models::HeadPoseDetectionModel>(param.model, 1, 3, 16);
   model->modelInit();
@@ -268,7 +268,7 @@ PipelineManager::createHeadPoseEstimation(
 
 std::shared_ptr<dynamic_vino_lib::BaseInference>
 PipelineManager::createObjectDetection(
-    const Params::ParamManager::InferenceParams& infer) {
+    const Params::ParamManager::InferenceRawData& infer) {
   // TODO: not implemented yet
 
   return createFaceDetection(infer);

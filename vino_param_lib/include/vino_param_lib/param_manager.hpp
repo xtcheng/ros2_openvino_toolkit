@@ -57,15 +57,18 @@ class ParamManager  // singleton
    */
   void print() const;
 
-  struct InferenceParams {
+  struct InferenceRawData {
     std::string name;
     std::string engine;
     std::string model;
     std::string label;
+    int model_input_num = -1;
+    int model_output_num = -1;
+    int batch_size = -1;
   };
-  struct PipelineParams {
+  struct PipelineRawData {
     std::string name;
-    std::vector<InferenceParams> infers;
+    std::vector<InferenceRawData> infers;
     std::vector<std::string> inputs;
     std::vector<std::string> outputs;
     std::multimap<std::string, std::string> connects;
@@ -96,7 +99,7 @@ class ParamManager  // singleton
    * @brief Retrieve pipeline parameters.
    * @return A list of struct PipelineParams storing all pipeline parameters.
    */
-  std::vector<PipelineParams> getPipelines() const { return pipelines_; }
+  std::vector<PipelineRawData> getPipelines() const { return pipelines_; }
 
   /**
    * @brief Retrieve the specific pipeline parameters by the given pipeline
@@ -104,7 +107,7 @@ class ParamManager  // singleton
    * @param[in] name: the name of the pipeline to be retrieved.
    * @return The pipeline paratmeters, or throw a loginc error.
    */
-  PipelineParams getPipeline(const std::string& name) const;
+  PipelineRawData getPipeline(const std::string& name) const;
 
   /**
    * @brief Retrieve common parameters.
@@ -117,7 +120,7 @@ class ParamManager  // singleton
   ParamManager(ParamManager const&);
   void operator=(ParamManager const&);
 
-  std::vector<PipelineParams> pipelines_;
+  std::vector<PipelineRawData> pipelines_;
   CommonParams common_;
 };
 
