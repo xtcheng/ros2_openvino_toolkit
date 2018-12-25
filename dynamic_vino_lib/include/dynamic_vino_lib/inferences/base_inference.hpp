@@ -130,6 +130,13 @@ class BaseInference {
    * @return Whether the Inference object fetches a result this time
    */
   virtual bool fetchResults();
+
+  /**
+   * @brief This function filters the fetched result by the given filter solver.
+   * @param[in] The filter solver to be used for the result filtering.
+   * @return Whether the Inference object filtering the results.
+   */
+  virtual bool filterResults(std::shared_ptr<FilterSolver::BaseSolver>&) = 0;
   /**
    * @brief Get the length of the buffer result array.
    */

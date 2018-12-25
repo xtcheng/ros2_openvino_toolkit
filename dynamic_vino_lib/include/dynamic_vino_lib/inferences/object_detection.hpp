@@ -19,16 +19,16 @@
  */
 #ifndef DYNAMIC_VINO_LIB__INFERENCES__OBJECT_DETECTION_HPP_
 #define DYNAMIC_VINO_LIB__INFERENCES__OBJECT_DETECTION_HPP_
+#include <memory>
 #include <object_msgs/msg/object.hpp>
 #include <object_msgs/msg/object_in_box.hpp>
 #include <object_msgs/msg/objects_in_boxes.hpp>
 #include <rclcpp/rclcpp.hpp>
-#include <memory>
-#include <vector>
 #include <string>
-#include "dynamic_vino_lib/models/object_detection_model.hpp"
+#include <vector>
 #include "dynamic_vino_lib/engines/engine.hpp"
 #include "dynamic_vino_lib/inferences/base_inference.hpp"
+#include "dynamic_vino_lib/models/object_detection_model.hpp"
 #include "inference_engine.hpp"
 #include "opencv2/opencv.hpp"
 // namespace
@@ -44,9 +44,10 @@ class ObjectDetectionResult : public Result {
   std::string getLabel() const { return label_; }
   /**
    * @brief Get the confidence that the detected area is a face.
-   * @return The confidence value. 
+   * @return The confidence value.
    */
   float getConfidence() const { return confidence_; }
+
  private:
   std::string label_ = "";
   float confidence_ = -1;
@@ -85,6 +86,13 @@ class ObjectDetection : public BaseInference {
    * @return Whether the Inference object fetches a result this time
    */
   bool fetchResults() override;
+
+  /**
+ * @brief This function filters the fetched result by the given filter solver.
+ * @param[in] The filter solver to be used for the result filtering.
+ * @return Whether the Inference object filtering the results.
+ */
+  bool filterResults(std::shared_ptr<FilterSolver::BaseSolver>& filter);
   /**
    * @brief Get the length of the buffer result array.
    * @return The length of the buffer result array.
@@ -106,9 +114,11 @@ class ObjectDetection : public BaseInference {
    * @return The name of the Inference instance.
    */
   const std::string getName() const override;
+
  private:
   std::shared_ptr<Models::ObjectDetectionModel> valid_model_;
   std::vector<Result> results_;
+  std::vector<Result> filtered_results_;
   int width_ = 0;
   int height_ = 0;
   int max_proposal_count_;
