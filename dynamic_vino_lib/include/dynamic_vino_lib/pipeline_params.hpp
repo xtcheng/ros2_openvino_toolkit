@@ -60,17 +60,17 @@ extern const std::string kInferTpye_ObjectSegmentation;
 class PipelineParams {
  public:
   PipelineParams(const std::string& name);
-  PipelineParams(const Params::ParamManager::PipelineParams& params);
-  static Params::ParamManager::PipelineParams getPipeline(
+  PipelineParams(const Params::ParamManager::PipelineRawData& params);
+  static Params::ParamManager::PipelineRawData getPipeline(
       const std::string& name);
-  PipelineParams& operator=(const Params::ParamManager::PipelineParams& params);
+  PipelineParams& operator=(const Params::ParamManager::PipelineRawData& params);
   void update();
-  void update(const Params::ParamManager::PipelineParams& params);
+  void update(const Params::ParamManager::PipelineRawData& params);
   bool isOutputTo(std::string& name);
   bool isGetFps();
 
  private:
-  Params::ParamManager::PipelineParams params_;
+  Params::ParamManager::PipelineRawData params_;
 };
 
 #endif  // DYNAMIC_VINO_LIB__PIPELINE_PARAM_HPP_

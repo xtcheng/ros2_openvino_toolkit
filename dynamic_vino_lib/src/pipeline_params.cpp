@@ -46,12 +46,12 @@ const std::string kInferTpye_ObjectSegmentation = "ObjectSegmentation";
 PipelineParams::PipelineParams(const std::string& name) { params_.name = name; }
 
 PipelineParams::PipelineParams(
-    const Params::ParamManager::PipelineParams& params) {
+    const Params::ParamManager::PipelineRawData& params) {
   params_ = params;
 }
 
 PipelineParams& PipelineParams::operator=(
-    const Params::ParamManager::PipelineParams& params) {
+    const Params::ParamManager::PipelineRawData& params) {
   params_.name = params.name;
   params_.infers = params.infers;
   params_.inputs = params.inputs;
@@ -61,7 +61,7 @@ PipelineParams& PipelineParams::operator=(
   return *this;
 }
 
-Params::ParamManager::PipelineParams PipelineParams::getPipeline(
+Params::ParamManager::PipelineRawData PipelineParams::getPipeline(
     const std::string& name) {
   return Params::ParamManager::getInstance().getPipeline(name);
 }
@@ -73,7 +73,7 @@ void PipelineParams::update() {
 }
 
 void PipelineParams::update(
-    const Params::ParamManager::PipelineParams& params) {
+    const Params::ParamManager::PipelineRawData& params) {
   params_ = params;
 }
 
