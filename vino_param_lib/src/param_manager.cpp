@@ -25,13 +25,16 @@
 
 namespace Params {
 
-void operator>>(const YAML::Node& node, ParamManager::PipelineRawData& pipeline);
+void operator>>(const YAML::Node& node,
+                ParamManager::PipelineRawData& pipeline);
 void operator>>(const YAML::Node& node,
                 std::vector<ParamManager::InferenceRawData>& list);
 void operator>>(const YAML::Node& node, ParamManager::InferenceRawData& infer);
 void operator>>(const YAML::Node& node, std::vector<std::string>& list);
 void operator>>(const YAML::Node& node,
                 std::multimap<std::string, std::string>& connect);
+void operator>>(const YAML::Node& node,
+                std::vector<ParamManager::FilterRawData>& filters);
 void operator>>(const YAML::Node& node, std::string& str);
 void operator>>(const YAML::Node& node, bool& val);
 void operator>>(const YAML::Node& node, int& val);
@@ -70,6 +73,7 @@ void operator>>(const YAML::Node& node,
   YAML_PARSE(node, "infers", pipeline.infers)
   YAML_PARSE(node, "outputs", pipeline.outputs)
   YAML_PARSE(node, "connects", pipeline.connects)
+  YAML_PARSE(node, "connects", pipeline.filters)
   YAML_PARSE(node, "input_path", pipeline.input_meta)
   slog::info << "Pipeline Params:name=" << pipeline.name << slog::endl;
 }
@@ -116,6 +120,26 @@ void operator>>(const YAML::Node& node,
   }
 }
 
+void operator>>(const YAML::Node& node,
+                std::vector<ParamManager::FilterRawData>& filters) {
+  for (unsigned i = 0; i < node.size(); i++) {
+    std::string left;
+    node[i]["left"] >> left;
+
+    std::vector<std::string> rights;
+    node[i]["right"] >> rights;
+    for (auto& r : rights) {
+      std::size_t pos = r.find(":");
+      if (pos != std::string::npos) {
+        ParamManager::FilterRawData filter;
+        filter.input = left;
+        filter.output = r.substr(pos + 1);
+        filter.filters.push_back(r.substr(0, pos));
+        filters.push_back(filter);
+      }
+    }
+  }
+}
 
 void operator>>(const YAML::Node& node, std::string& str) {
   str = node.as<std::string>();
@@ -152,6 +176,15 @@ void ParamManager::print() const {
     slog::info << "\tConnections: " << slog::endl;
     for (auto& c : pipeline.connects) {
       slog::info << "\t\t" << c.first << "->" << c.second << slog::endl;
+    }
+
+    slog::info << "\tFilters: " << slog::endl;
+    for (const auto& f : pipeline.filters) {
+      slog::info << "\t\t" << f.input << "->" << f.output << ":";
+      for (const auto& f_str : f.filters) {
+        slog::info << " " << f_str;
+      }
+      slog::info << slog::endl;
     }
   }
 

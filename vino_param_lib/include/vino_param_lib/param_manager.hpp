@@ -66,6 +66,13 @@ class ParamManager  // singleton
     int model_output_num = -1;
     int batch_size = -1;
   };
+
+  struct FilterRawData {
+    std::string input;
+    std::string output;
+    std::vector<std::string> filters;
+  };
+
   struct PipelineRawData {
     std::string name;
     std::vector<InferenceRawData> infers;
@@ -73,6 +80,7 @@ class ParamManager  // singleton
     std::vector<std::string> outputs;
     std::multimap<std::string, std::string> connects;
     std::string input_meta;
+    std::vector<FilterRawData> filters;
   };
   struct CommonParams {
     std::string custom_cpu_library;
