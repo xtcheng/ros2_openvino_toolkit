@@ -95,6 +95,13 @@ public:
    * @return Whether the Inference object fetches a result this time
    */
   bool fetchResults() override;
+
+  /**
+ * @brief This function filters the fetched result by the given filter solver.
+ * @param[in] filters The filter solver to be used for the result filtering.
+ * @return Whether the Inference object filtering the results.
+ */
+  bool filterResults(std::vector<std::shared_ptr<FilterSolver::BaseSolver>>& filters);
   /**
    * @brief Get the length of the buffer result array.
    * @return The length of the buffer result array.
@@ -120,6 +127,7 @@ public:
 private:
   std::shared_ptr<Models::ObjectDetectionModel> valid_model_;
   std::vector<Result> results_;
+  std::vector<Result> filtered_results_;
   int width_ = 0;
   int height_ = 0;
   int max_proposal_count_;

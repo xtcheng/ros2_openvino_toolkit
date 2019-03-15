@@ -262,6 +262,11 @@ void Pipeline::callback(const std::string & detection_name)
         auto next_detection_ptr = detection_ptr_iter->second;
         size_t result_length = detection_ptr->getResultsLength();
         size_t batch_size = next_detection_ptr->getMaxBatchSize();
+
+        //Lewis: getFilterSolver
+        auto filter_solvers = params_->findPipelineFilters(detection_name, next_name);
+        next_detection_ptr->filterResults(filter_solvers);
+
         for (size_t i = 0; i < result_length; ++i) {
           const dynamic_vino_lib::Result * prev_result = detection_ptr->getLocationResult(i);
           auto clippedRect = prev_result->getLocation() & cv::Rect(0, 0, width_, height_);

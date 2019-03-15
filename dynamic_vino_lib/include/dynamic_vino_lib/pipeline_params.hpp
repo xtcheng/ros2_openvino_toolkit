@@ -69,6 +69,11 @@ public:
   void update(const Params::ParamManager::PipelineParams & params);
   bool isOutputTo(std::string & name);
   bool isGetFps();
+  std::vector<std::shared_ptr<BaseFilterSolver>>
+  findPipelineFilters(const std::string& input, const std::string& output)
+  {
+    return pipeline_filters_.findPipelineFilters(input, output);
+  };
 
 private:
   Params::ParamManager::PipelineParams params_;

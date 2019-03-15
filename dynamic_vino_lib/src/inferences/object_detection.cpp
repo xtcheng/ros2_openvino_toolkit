@@ -76,6 +76,7 @@ bool dynamic_vino_lib::ObjectDetection::fetchResults()
   }
   bool found_result = false;
   results_.clear();
+  filtered_results_.clear();
   InferenceEngine::InferRequest::Ptr request = getEngine()->getRequest();
   std::string output = valid_model_->getOutputName();
   const float * detections = request->GetBlob(output)->buffer().as<float *>();
@@ -105,16 +106,37 @@ bool dynamic_vino_lib::ObjectDetection::fetchResults()
   if (!found_result) {
     results_.clear();
   }
+
+  /**< copy result to filtered_results_, in case of no filtering requests. >**/
+  filtered_results_ = results_;
+
+  return true;
+}
+
+bool dynamic_vino_lib::ObjectDetection::filterResults(
+    std::vector<std::shared_ptr<FilterSolver::BaseSolver>>& filters)
+{
+  filtered_results_.clear();
+
+  for(auto& filter : filters)
+  {
+    for (auto i = 0; i < results_.size(); i++) {
+      if (filter->isSelected(results_[i])) {
+        filtered_results_.push_back(results_[i]);
+      }
+    }
+  }
+  
   return true;
 }
 
 const int dynamic_vino_lib::ObjectDetection::getResultsLength() const
 {
-  return static_cast<int>(results_.size());
+  return static_cast<int>(filtered_results_.size());
 }
 const dynamic_vino_lib::Result * dynamic_vino_lib::ObjectDetection::getLocationResult(int idx) const
 {
-  return &(results_[idx]);
+  return &(filtered_results_[idx]);
 }
 const std::string dynamic_vino_lib::ObjectDetection::getName() const
 {
