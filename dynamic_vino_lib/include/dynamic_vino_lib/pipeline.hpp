@@ -31,6 +31,8 @@
 #include "dynamic_vino_lib/inputs/standard_camera.hpp"
 #include "dynamic_vino_lib/outputs/base_output.hpp"
 #include "dynamic_vino_lib/pipeline_params.hpp"
+#include "dynamic_vino_lib/pipeline_filters.hpp"
+#include "dynamic_vino_lib/filters/base_filter.hpp"
 #include "opencv2/opencv.hpp"
 
 /**
@@ -73,6 +75,10 @@ public:
 
   bool add(const std::string & name, std::shared_ptr<Outputs::BaseOutput> output);
   void addConnect(const std::string & parent, const std::string & name);
+  inline void addFilters(const Params::ParamManager::FilterRawData& filters)
+  {
+    filters_.add(filters);
+  }
   bool add(const std::string & name, std::shared_ptr<dynamic_vino_lib::BaseInference> inference);
   /**
    * @brief Add inference network-output device edge to the pipeline.
@@ -111,6 +117,12 @@ public:
   {
     return input_device_;
   }
+  
+   std::vector<std::shared_ptr<dynamic_vino_lib::BaseFilterSolver>>
+  findPipelineFilters(const std::string& input, const std::string& output)
+  {
+    return filters_.findPipelineFilters(input, output);
+  };
 
 private:
   void initInferenceCounter();
@@ -125,6 +137,7 @@ private:
   const int kCatagoryOrder_Output = 3;
 
   std::shared_ptr<PipelineParams> params_;
+  PipelineFilters filters_;
 
   std::shared_ptr<Input::BaseInputDevice> input_device_;
   std::string input_device_name_;

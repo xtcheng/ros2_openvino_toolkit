@@ -18,8 +18,12 @@
  * @brief A header file with declaration for BaseFilterSolver Class
  * @file base_filter.hpp
  */
-#ifndef DYNAMIC_VINO_LIB__INFERENCES__FILTER__BASE_FILTER_HPP_
-#define DYNAMIC_VINO_LIB__INFERENCES__FILTER__BASE_FILTER_HPP_
+#ifndef DYNAMIC_VINO_LIB__FILTERS__BASE_FILTER_HPP_
+#define DYNAMIC_VINO_LIB__FILTERS__BASE_FILTER_HPP_
+
+#include <string>
+#include <vector>
+#include <utility>
 
 namespace dynamic_vino_lib {
 
@@ -34,21 +38,21 @@ class BaseFilterSolver {
   /**
    * @brief Checks if the given result is selected by the filter class.
    */
-  template <typename T> 
-  virtual bool isSelected(const T&) = 0;
+  virtual bool filtering() {return true;};
 
-  virtual void addFilterCondition(const std::string& cond)
+  void addFilterCondition(const std::string& cond)
   {
     if(cond.size() > 0)
     {
       filter_conditions_.push_back(cond);
     }
   };
-  virtual const std::string type(){return "Base";};
+  
+  const std::string type(){return "Base";};
  private:
    std::vector<std::string> filter_conditions_;
 
-
+};
 }  // namespace dynamic_vino_lib
 
-#endif  // DYNAMIC_VINO_LIB__INFERENCES__BASE_INFERENCE_HPP_
+#endif  // DYNAMIC_VINO_LIB__FILTERS__BASE_FILTER_HPP_

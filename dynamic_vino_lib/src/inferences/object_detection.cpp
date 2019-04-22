@@ -113,28 +113,11 @@ bool dynamic_vino_lib::ObjectDetection::fetchResults()
   return true;
 }
 
-bool dynamic_vino_lib::ObjectDetection::filterResults(
-    std::vector<std::shared_ptr<FilterSolver::BaseSolver>>& filters)
-{
-  filtered_results_.clear();
-
-  for(auto& filter : filters)
-  {
-    for (auto i = 0; i < results_.size(); i++) {
-      if (filter->isSelected(results_[i])) {
-        filtered_results_.push_back(results_[i]);
-      }
-    }
-  }
-  
-  return true;
-}
-
 const int dynamic_vino_lib::ObjectDetection::getResultsLength() const
 {
   return static_cast<int>(filtered_results_.size());
 }
-const dynamic_vino_lib::Result * dynamic_vino_lib::ObjectDetection::getLocationResult(int idx) const
+const dynamic_vino_lib::ObjectDetection::Result * dynamic_vino_lib::ObjectDetection::getLocationResult(int idx) const
 {
   return &(filtered_results_[idx]);
 }
@@ -147,6 +130,6 @@ dynamic_vino_lib::ObjectDetection::observeOutput(
   const std::shared_ptr<Outputs::BaseOutput> & output)
 {
   if (output != nullptr) {
-    output->accept(results_);
+    output->accept(filtered_results_);
   }
 }

@@ -22,7 +22,9 @@
 #define DYNAMIC_VINO_LIB__PIPELINE_FILTERS_HPP_
 
 #include <vino_param_lib/param_manager.hpp>
+#include <utility>
 #include "opencv2/opencv.hpp"
+#include "dynamic_vino_lib/filters/base_filter.hpp"
 
 /**
  * @class PipelineFilters
@@ -32,19 +34,23 @@
 class PipelineFilters {
  public:
   PipelineFilters();
-  PipelineParams(const Params::ParamManager::PipelineRawData& params);
-  void add(const Params::ParamManager::FilterRawData& params);
-  virtual std::shared_ptr<BaseFilterSolver> getFilterSolver(const std::string& type);
-  std::vector<std::shared_ptr<BaseFilterSolver>>
+  PipelineFilters(const Params::ParamManager::PipelineRawData& params);
+  void add(const Params::ParamManager::FilterRawData& filters);
+  virtual std::shared_ptr<dynamic_vino_lib::BaseFilterSolver> getFilterSolver(const std::string& type);
+  std::vector<std::shared_ptr<dynamic_vino_lib::BaseFilterSolver>>
     findPipelineFilters(const std::string& input, const std::string& output);
+    
+  std::vector<std::string> split(const std::string& source, const std::string& splitter);
 public:
   struct PipelineFilterNative{
     std::string input;
     std::string output;
-    std::vector<std::shared_ptr<BaseFilterSolver>> filter_solvers;
+    std::vector<std::shared_ptr<dynamic_vino_lib::BaseFilterSolver>> filter_solvers;
   };
 
  private:
+  void add(const std::string&, const std::string&, const std::string&);
+
   std::vector<PipelineFilterNative> pipeline_filters_;
 
 };

@@ -18,10 +18,10 @@
  * @brief A header file with declaration for LabelFilterSolver Class
  * @file label_filter.hpp
  */
-#ifndef DYNAMIC_VINO_LIB__INFERENCES__FILTER__LABEL_FILTER_HPP_
-#define DYNAMIC_VINO_LIB__INFERENCES__FILTER__LABEL_FILTER_HPP_
+#ifndef DYNAMIC_VINO_LIB__FILTERS__LABEL_FILTER_HPP_
+#define DYNAMIC_VINO_LIB__FILTERS__LABEL_FILTER_HPP_
 
-#include #include "dynamic_vino_lib/inferences/filters/base_filter.hpp"
+#include "dynamic_vino_lib/filters/base_filter.hpp"
 
 namespace dynamic_vino_lib {
 
@@ -29,23 +29,27 @@ namespace dynamic_vino_lib {
  * @class LabelFilterSolver
  * @brief Label filter solver, filtering by label information
  */
+template <typename T>
 class LabelFilterSolver : public BaseFilterSolver {
  public:
-  LabelFilterSolver(const std::vector<std::string>& label);
+  LabelFilterSolver();
   virtual ~LabelFilterSolver() = default;
-  /**
-   * @brief Checks if the given result is selected by the filter class.
-   */
-  template <typename T> 
-  bool isSelected(const T&);
+
+  bool filtering() override;
 
   void addFilterCondition(const std::string&);
   
+  void setInference(const T*);
+  
   const std::string type(){return "Label";};
  private:
-  std::vector<std::string> includes_;
-  std::vector<std::string> excludes_;
+  T* infer_ = nullptr;
+  //std::vector<std::string> includes_;
+  //std::vector<std::string> excludes_;
+  std::string includes_;
+  std::string excludes_;
+};
 
 }  // namespace dynamic_vino_lib
 
-#endif  // DYNAMIC_VINO_LIB__INFERENCES__FILTER__LABEL_FILTER_HPP_
+#endif  // DYNAMIC_VINO_LIB__FILTERS__LABEL_FILTER_HPP_

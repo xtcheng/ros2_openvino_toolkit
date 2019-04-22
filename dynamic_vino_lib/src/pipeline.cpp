@@ -254,6 +254,14 @@ void Pipeline::callback(const std::string & detection_name)
   for (auto pos = next_.equal_range(detection_name); pos.first != pos.second; ++pos.first) {
     std::string next_name = pos.first->second;
     // if next is output, then print
+    
+    //Lewis: getFilterSolver
+    auto filter_solvers = findPipelineFilters(detection_name, next_name);
+    for(auto& s : filter_solvers){
+      s->setInference(detection_ptr.get());
+      s->filtering();
+    }
+    
     if (output_names_.find(next_name) != output_names_.end()) {
       detection_ptr->observeOutput(name_to_output_map_[next_name]);
     } else {
@@ -263,8 +271,7 @@ void Pipeline::callback(const std::string & detection_name)
         size_t result_length = detection_ptr->getResultsLength();
         size_t batch_size = next_detection_ptr->getMaxBatchSize();
 
-        //Lewis: getFilterSolver
-        auto filter_solvers = params_->findPipelineFilters(detection_name, next_name);
+          
         next_detection_ptr->filterResults(filter_solvers);
 
         for (size_t i = 0; i < result_length; ++i) {

@@ -51,7 +51,7 @@
 #include "dynamic_vino_lib/pipeline_params.hpp"
 
 std::shared_ptr<Pipeline>
-PipelineManager::createPipeline(const Params::ParamManager::PipelineParams & params)
+PipelineManager::createPipeline(const Params::ParamManager::PipelineRawData & params)
 {
   if (params.name == "") {
     throw std::logic_error("The name of pipeline won't be empty!");
@@ -88,6 +88,9 @@ PipelineManager::createPipeline(const Params::ParamManager::PipelineParams & par
   for (auto it = params.connects.begin(); it != params.connects.end(); ++it) {
     pipeline->add(it->first, it->second);
   }
+  
+  slog::info << "Updateing filters ..." << slog::endl;
+  pipeline->addFilters(params.filters);
 
   data.pipeline = pipeline;
   data.params = params;
@@ -101,7 +104,7 @@ PipelineManager::createPipeline(const Params::ParamManager::PipelineParams & par
 }
 
 std::map<std::string, std::shared_ptr<Input::BaseInputDevice>>
-PipelineManager::parseInputDevice(const Params::ParamManager::PipelineParams & params)
+PipelineManager::parseInputDevice(const Params::ParamManager::PipelineRawData & params)
 {
   std::map<std::string, std::shared_ptr<Input::BaseInputDevice>> inputs;
   for (auto & name : params.inputs) {
@@ -136,7 +139,7 @@ PipelineManager::parseInputDevice(const Params::ParamManager::PipelineParams & p
 }
 
 std::map<std::string, std::shared_ptr<Outputs::BaseOutput>>
-PipelineManager::parseOutput(const Params::ParamManager::PipelineParams & params)
+PipelineManager::parseOutput(const Params::ParamManager::PipelineRawData & params)
 {
   std::map<std::string, std::shared_ptr<Outputs::BaseOutput>> outputs;
   for (auto & name : params.outputs) {
@@ -163,7 +166,7 @@ PipelineManager::parseOutput(const Params::ParamManager::PipelineParams & params
 }
 
 std::map<std::string, std::shared_ptr<dynamic_vino_lib::BaseInference>>
-PipelineManager::parseInference(const Params::ParamManager::PipelineParams & params)
+PipelineManager::parseInference(const Params::ParamManager::PipelineRawData & params)
 {
   /**< update plugins for devices >**/
   auto pcommon = Params::ParamManager::getInstance().getCommon();
@@ -212,13 +215,13 @@ PipelineManager::parseInference(const Params::ParamManager::PipelineParams & par
 
 std::shared_ptr<dynamic_vino_lib::BaseInference>
 PipelineManager::createFaceDetection(
-  const Params::ParamManager::InferenceParams & infer)
+  const Params::ParamManager::InferenceRawData & infer)
 {
   return createObjectDetection(infer);
 }
 
 std::shared_ptr<dynamic_vino_lib::BaseInference>
-PipelineManager::createAgeGenderRecognition(const Params::ParamManager::InferenceParams & param)
+PipelineManager::createAgeGenderRecognition(const Params::ParamManager::InferenceRawData & param)
 {
   auto model = std::make_shared<Models::AgeGenderDetectionModel>(param.model, 1, 2, param.batch);
   model->modelInit();
@@ -231,7 +234,7 @@ PipelineManager::createAgeGenderRecognition(const Params::ParamManager::Inferenc
 }
 
 std::shared_ptr<dynamic_vino_lib::BaseInference>
-PipelineManager::createEmotionRecognition(const Params::ParamManager::InferenceParams & param)
+PipelineManager::createEmotionRecognition(const Params::ParamManager::InferenceRawData & param)
 {
   auto model = std::make_shared<Models::EmotionDetectionModel>(param.model, 1, 1, param.batch);
   model->modelInit();
@@ -244,7 +247,7 @@ PipelineManager::createEmotionRecognition(const Params::ParamManager::InferenceP
 }
 
 std::shared_ptr<dynamic_vino_lib::BaseInference>
-PipelineManager::createHeadPoseEstimation(const Params::ParamManager::InferenceParams & param)
+PipelineManager::createHeadPoseEstimation(const Params::ParamManager::InferenceRawData & param)
 {
   auto model = std::make_shared<Models::HeadPoseDetectionModel>(param.model, 1, 3, param.batch);
   model->modelInit();
@@ -258,7 +261,7 @@ PipelineManager::createHeadPoseEstimation(const Params::ParamManager::InferenceP
 
 std::shared_ptr<dynamic_vino_lib::BaseInference>
 PipelineManager::createObjectDetection(
-  const Params::ParamManager::InferenceParams & infer)
+  const Params::ParamManager::InferenceRawData & infer)
 {
   auto object_detection_model =
     std::make_shared<Models::ObjectDetectionModel>(infer.model, 1, 1, infer.batch);
@@ -274,7 +277,7 @@ PipelineManager::createObjectDetection(
 }
 
 std::shared_ptr<dynamic_vino_lib::BaseInference>
-PipelineManager::createObjectSegmentation(const Params::ParamManager::InferenceParams & infer)
+PipelineManager::createObjectSegmentation(const Params::ParamManager::InferenceRawData & infer)
 {
   auto obejct_segmentation_model =
     std::make_shared<Models::ObjectSegmentationModel>(infer.model, 1, 2, infer.batch);
@@ -291,7 +294,7 @@ PipelineManager::createObjectSegmentation(const Params::ParamManager::InferenceP
 
 std::shared_ptr<dynamic_vino_lib::BaseInference>
 PipelineManager::createPersonReidentification(
-  const Params::ParamManager::InferenceParams & infer)
+  const Params::ParamManager::InferenceRawData & infer)
 {
   auto person_reidentification_model =
     std::make_shared<Models::PersonReidentificationModel>(infer.model, 1, 1, infer.batch);

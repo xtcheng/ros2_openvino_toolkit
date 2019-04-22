@@ -26,18 +26,18 @@
 #include <vino_param_lib/param_manager.hpp>
 #include "dynamic_vino_lib/pipeline_filters.hpp"
 
+
 PipelineFilters::PipelineFilters() {}
 
 PipelineFilters::PipelineFilters(
     const Params::ParamManager::PipelineRawData& params) {
-  add(params);
+  add(params.filters);
 }
 
 void PipelineFilters::add(
-    const Params::ParamManager::PipelineRawData& params) {
-
+    const Params::ParamManager::FilterRawData& filters) {
   
-  for( auto& f : params.filters)
+  for( auto& f : filters)
   {
     
     add(f.input, f.output, f.filters);
@@ -61,35 +61,26 @@ void PipelineFilters::add(
       slog::err << "ERROR in filter conditions, the correct one should be A=B+C" << slog::endl;
       //throw
     }
-    std::shared_ptr<BaseFilterSolver> solver = getFilterSolver(type_and_values[0]);
+    std::shared_ptr<BaseFilterSolver> solver = getFilterSolver(input, type_and_values[0]);
     solver->addFilterCondition(type_and_values[1]);
     pipeline_filters_.filter_solvers.push_back(solver);
   }
 
 }
+#define _GEN_FILTER_SOLVER_(infer, name) {std::make_shared<##name##FilterSolver<##infer##>()}
+#define GEN_FILTER_SOLVER(infer, name) _GEN_FILTER_SOLVER_(infer, name)
 
 std::shared_ptr<BaseFilterSolver>
-PipelineFilters::getFilterSolver(const std::string& type)
+PipelineFilters::getFilterSolver(const std::string infer, const std::string& type)
 {
-#ifdef SUPPORT_SOLVER_CLUSTER
-  /**< If the solver with same type has been alread existed,then just use it. >**/
-  for(auto& s : pipeline_filters_.filter_solvers)
-  {
-    if(type == s->type())
-    {
-      return s;
-    }
-  }
-#endif
-  
-  /**< Else, create a new one. >**/
-  if (type == "Label")
-  {
-    return new LabelFilterSolver();
+  if(!supportedType(type)){
+    return nullptr;
   }
   
-  //return new NullFilterSolver();
-  return nullptr;
+  std::shared_ptr<BaseFilterSolver> solver = nullptr;
+  solver = GEN_FILTER_SOLVER(infer.c_str(), type.c_str());
+  
+  return solver;
 
 }
 
