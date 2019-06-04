@@ -29,6 +29,21 @@ class ObjectDetectionSSDModel : public ObjectDetectionModel
 {
 public:
   ObjectDetectionSSDModel(const std::string &, int, int, int);
+
+  bool fetchResults(
+    const std::shared_ptr<Engines::Engine>& engine,
+    std::vector<dynamic_vino_lib::ObjectDetectionResult>& result,
+    const bool& enable_roi_constraint = false) override;
+
+  bool enqueue(
+    const std::shared_ptr<Engines::Engine>& engine,
+    const cv::Mat & frame,
+    const cv::Rect & input_frame_loc) const override;
+
+  bool matToBlob(
+    const cv::Mat& orig_image, const cv::Rect&, float scale_factor, 
+    int batch_index, const std::shared_ptr<Engines::Engine>& engine) override;
+
   inline const std::string getInputName()
   {
     return input_;

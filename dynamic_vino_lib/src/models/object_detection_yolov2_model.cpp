@@ -97,5 +97,229 @@ void Models::ObjectDetectionYolov2Model::checkLayerProperty(
 
 const std::string Models::ObjectDetectionYolov2Model::getModelName() const
 {
-  return "Object Detection";
+  return "Object Detection Yolo v2";
+}
+
+bool Models::ObjectDetectionYolov2Model::enqueue(
+  const std::shared_ptr<Engines::Engine>& engine,
+  const cv::Mat & frame,
+  const cv::Rect & input_frame_loc) const
+{
+  if (width_ == 0 && height_ == 0)
+  {
+    width_ = frame.cols;
+    height_ = frame.rows;
+  }
+
+  if (!matToBlob(frame, input_frame_loc, 1, 0, engine))
+  {
+    return false;
+  }
+  return true;
+}
+
+bool Models::ObjectDetectionYolov2Model::matToBlob(
+    const cv::Mat& orig_image, const cv::Rect&, float scale_factor, 
+    int batch_index, const std::shared_ptr<Engines::Engine>& engine)
+{
+  if(engine == nullptr){
+    slog::err << "A frame is trying to be enqueued in a NULL Engine." << slog::endl;
+    return false;
+  }
+
+  std::string input_name = getInputName();
+  InferenceEngine::Blob::Ptr input_blob =
+      engine->getRequest()->GetBlob(input_name);
+
+  InferenceEngine::SizeVector blob_size = input_blob->getTensorDesc().getDims();
+  const int width = blob_size[3];
+  const int height = blob_size[2];
+  const int channels = blob_size[1];
+  float* blob_data = input_blob->buffer().as<float*>();
+
+  
+  int dx = 0;
+  int dy = 0;
+  int srcw = 0;
+  int srch = 0;
+
+  int IH = height;
+  int IW = width;
+
+  cv::Mat image = orig_image.clone();
+  cv::cvtColor(image, image, cv::COLOR_BGR2RGB);
+
+  image.convertTo(image, CV_32F, 1.0/255.0, 0);
+  srcw = image.size().width;
+  srch = image.size().height;
+
+  cv::Mat resizedImg (IH, IW, CV_32FC3);
+  resizedImg = cv::Scalar(0.5, 0.5, 0.5);
+  int imw = image.size().width;
+  int imh = image.size().height;
+  float resize_ratio = (float)IH / (float)std::max(imw, imh);
+  cv::resize(image, image, cv::Size(imw*resize_ratio, imh*resize_ratio));
+
+  int new_w = imw;
+  int new_h = imh;
+  if (((float)IW/imw) < ((float)IH/imh)) {
+    new_w = IW;
+    new_h = (imh * IW)/imw;
+  } else {
+    new_h = IH;
+    new_w = (imw * IW)/imh;
+  }
+  dx = (IW-new_w)/2;
+  dy = (IH-new_h)/2;
+
+  imh = image.size().height;
+  imw = image.size().width;
+
+  for(int row = 0; row < imh; row ++)
+  {
+    for(int col = 0; col < imw; col ++)
+    {
+      for(int ch = 0; ch < 3; ch ++)
+      {
+        resizedImg.at<cv::Vec3f>(dy + row, dx + col)[ch] = image.at<cv::Vec3f>(row, col)[ch];
+      }
+    }
+  }
+
+  for (int c = 0; c < channels; c++)
+  {
+    for (int h = 0; h < height; h++)
+    {
+      for (int w = 0; w < width; w++)
+      {
+        blob_data[c * width * height + h*width + w] = resizedImg.at<cv::Vec3f>(h, w)[c];
+      }
+    }
+  }
+
+  setFrameSize(srcw, srch);
+  return true;
+}
+
+bool Models::ObjectDetectionYolov2Model::fetchResults(
+  const std::shared_ptr<Engines::Engine>& engine,
+  std::vector<dynamic_vino_lib::ObjectDetectionResult>& result,
+  const bool& enable_roi_constraint)
+{
+
+  if(engine == nullptr){
+    slog::err << "Trying to fetch results from <null> Engines." << slog::endl;
+    return false;
+  }
+
+  InferenceEngine::InferRequest::Ptr request = engine->getRequest();
+
+  std::string output = getOutputName();
+  std::vector<std::string>& labels = getLabels();
+
+  const float* detections = request->GetBlob(output)->buffer().as<InferenceEngine::PrecisionTrait<InferenceEngine::Precision::FP32>::value_type *>();
+  InferenceEngine::CNNLayerPtr layer = getLayer();
+  InferenceEngine::InputInfo::Ptr input_info = getInputInfo();
+
+  int input_height = input_info->getTensorDesc().getDims()[2];
+  int input_width = input_info->getTensorDesc().getDims()[3];
+
+  // --------------------------- Validating output parameters -------------------------------------
+  if (layer != nullptr && layer->type != "RegionYolo"){
+      throw std::runtime_error("Invalid output type: " + layer->type + ". RegionYolo expected");
+  }
+  // --------------------------- Extracting layer parameters -------------------------------------
+  const int num = layer->GetParamAsInt("num");
+  const int coords = layer->GetParamAsInt("coords");
+  const int classes = layer->GetParamAsInt("classes");
+
+  const int out_blob_h = layer->input()->dims[0];
+
+  std::vector<float> anchors = {
+      0.572730, 0.677385,
+      1.874460, 2.062530,
+      3.338430, 5.474340,
+      7.882820, 3.527780,
+      9.770520, 9.168280
+  };
+  float threshold = 0.5;
+  auto side = out_blob_h;
+
+  auto side_square = side * side;
+
+  // --------------------------- Parsing YOLO Region output -------------------------------------
+  std::vector<Result> raw_results;
+  for (int i = 0; i < side_square; ++i) {
+    int row = i / side;
+    int col = i % side;
+
+    for (int n = 0; n < num; ++n) {
+      int obj_index = getEntryIndex(side, coords, classes, n * side * side + i, coords);
+      int box_index = getEntryIndex(side, coords, classes, n * side * side + i, 0);
+
+      float scale = detections[obj_index];
+
+      if (scale < threshold)
+          continue;
+
+      float x = (col + detections[box_index + 0 * side_square]) / side * input_width;
+      float y = (row + detections[box_index + 1 * side_square]) / side * input_height;
+      float height = std::exp(detections[box_index + 3 * side_square]) * anchors[2 * n + 1] / side * input_height;
+      float width  = std::exp(detections[box_index + 2 * side_square]) * anchors[2 * n] / side * input_width;
+
+      for (int j = 0; j < classes; ++j) {
+
+        int class_index = getEntryIndex(side, coords, classes, n * side_square + i, coords + 1 + j);
+
+        float prob = scale * detections[class_index];
+        if (prob < threshold)
+          continue;
+
+        float x_min = x - width/2;
+        float y_min = y - height/2;
+
+        float x_min_resized = x_min / input_width * frame_size_.width;
+        float y_min_resized = y_min / input_height * frame_size_.height;
+        float width_resized = width / input_width * frame_size_.width;
+        float height_resized = height / input_height * frame_size_.height;
+
+        cv::Rect r(x_min_resized, y_min_resized, width_resized, height_resized);
+        Result result(r);
+        result.label_ = j;
+        result.label_ = labels[j];
+
+        result.confidence_ = prob;
+        raw_results.emplace_back(result);
+      }
+    }
+  }
+
+  std::sort(raw_results.begin(), raw_results.end());
+  for (unsigned int i = 0; i < raw_results.size(); ++i) {
+    if (raw_results[i].confidence_ == 0)
+      continue;
+      for (unsigned int j = i + 1; j < raw_results.size(); ++j)
+      auto iou = ObjectDetection::IntersectionOverUnion(
+        raw_results[i].getLocation(), raw_results[j].getLocation());
+      if (iou) >= 0.45)
+        raw_results[j].confidence_ = 0;
+  }
+
+  for (auto &raw_result : raw_results) {
+    if (raw_result.getConfidence() < 0.5)
+       continue;
+
+    results_.push_back(raw_result);
+  }
+
+  raw_results.clear();
+
+  return true;
+}
+
+int dynamic_vino_lib::ObjectDetectionYolov2Model::getEntryIndex(int side, int lcoords, int lclasses, int location, int entry)
+{
+  int n = location / (side * side);
+  int loc = location % (side * side);
+  return n * side * side * (lcoords + lclasses + 1) + entry * side * side + loc;
 }

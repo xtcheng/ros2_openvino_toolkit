@@ -19,6 +19,9 @@
 #include <string>
 #include "dynamic_vino_lib/models/object_detection_ssd_model.hpp"
 #include "dynamic_vino_lib/slog.hpp"
+
+using Result = dynamic_vino_lib::ObjectDetectionResult;
+
 // Validated Object Detection Network
 Models::ObjectDetectionSSDModel::ObjectDetectionSSDModel(
   const std::string & model_loc, int input_num,
@@ -82,8 +85,8 @@ void Models::ObjectDetectionSSDModel::checkLayerProperty(
   max_proposal_count_ = static_cast<int>(output_dims[2]);
   slog::info << "max proposal count is: " << max_proposal_count_ << slog::endl;
 
-  object_size_ = static_cast<int>(output_dims[3]);
-  if (object_size_ != 7) {
+  object_size = static_cast<int>(output_dims[3]);
+  if (object_size != 7) {
     throw std::logic_error("Object Detection network output layer should have 7 as a last "
             "dimension");
   }
@@ -97,5 +100,109 @@ void Models::ObjectDetectionSSDModel::checkLayerProperty(
 
 const std::string Models::ObjectDetectionSSDModel::getModelName() const
 {
-  return "Object Detection";
+  return "Object Detection SSD";
+}
+
+bool Models::ObjectDetectionSSDModel::enqueue(
+  const std::shared_ptr<Engines::Engine>& engine,
+  const cv::Mat & frame,
+  const cv::Rect & input_frame_loc) const
+{
+  if (!matToBlob(frame, input_frame_loc, 1, 0, engine))
+  {
+    return false;
+  }
+
+  setFrameSize(frame.cols, frame.rows);
+  return true;
+}
+
+bool Models::ObjectDetectionSSDModel::matToBlob(
+    const cv::Mat& orig_image, const cv::Rect&, float scale_factor, 
+    int batch_index, const std::shared_ptr<Engines::Engine>& engine)
+{
+  if(engine == nullptr){
+    slog::err << "A frame is trying to be enqueued in a NULL Engine." << slog::endl;
+    return false;
+  }
+
+  std::string input_name = getInputName();
+  InferenceEngine::Blob::Ptr input_blob =
+      engine->getRequest()->GetBlob(input_name);
+
+  InferenceEngine::SizeVector blob_size = input_blob->getTensorDesc().getDims();
+  const int width = blob_size[3];
+  const int height = blob_size[2];
+  const int channels = blob_size[1];
+  u_int8_t * blob_data = input_blob->buffer().as<u_int8_t*>();
+
+  cv::Mat resized_image(orig_image);
+  if (width != orig_image.size().width || height != orig_image.size().height)
+  { 
+    cv::resize(orig_image, resized_image, cv::Size(width, height));
+  }
+  int batchOffset = batch_index * width * height * channels;
+
+  for (int c = 0; c < channels; c++)
+  { 
+    for (int h = 0; h < height; h++)
+    {
+      for (int w = 0; w < width; w++)
+      { 
+        blob_data[batchOffset + c * width * height + h * width + w] =
+            resized_image.at<cv::Vec3b>(h, w)[c] * scale_factor;
+      }
+    }
+  }
+  
+  return true;
+}
+
+bool Models::ObjectDetectionSSDModel::fetchResults(
+  const std::shared_ptr<Engines::Engine>& engine,
+  std::vector<dynamic_vino_lib::ObjectDetectionResult>& result,
+  const bool& enable_roi_constraint)
+{
+
+  if(engine == nullptr){
+    slog::err << "Trying to fetch results from <null> Engines." << slog::endl;
+    return false;
+  }
+
+  InferenceEngine::InferRequest::Ptr request = engine->getRequest();
+  std::string output = valid_model_->getOutputName();
+  const float * detections = request->GetBlob(output)->buffer().as<float *>();
+
+  auto max_proposal_count = getMaxProposalCount();
+  auto object_size = getObjectSize();
+  for (int i = 0; i < max_proposal_count; i++) {
+    float image_id = detections[i * object_size + 0];
+    if (image_id < 0) {
+      break;
+    }
+
+    cv::Rect r;
+    auto label_num = static_cast<int>(detections[i * object_size + 1]);
+    std::vector<std::string> & labels = valid_model_->getLabels();
+    r.x = static_cast<int>(detections[i * object_size + 3] * width_);
+    r.y = static_cast<int>(detections[i * object_size + 4] * height_);
+    r.width = static_cast<int>(detections[i * object_size + 5] * width_ - r.x);
+    r.height = static_cast<int>(detections[i * object_size + 6] * height_ - r.y);
+
+    if (enable_roi_constraint) {r &= cv::Rect(0, 0, width_, height_);}
+    
+    Result result(r);
+    result.label_ = label_num < labels.size() ? labels[label_num] :
+      std::string("label #") + std::to_string(label_num);
+    result.confidence_ = detections[i * object_size + 2];
+
+
+    if (result.confidence_ <= show_output_thresh_ || r.x == 0) {
+      continue;
+    }
+
+    results_.emplace_back(result);
+  }
+
+  return true;
 }

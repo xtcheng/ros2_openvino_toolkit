@@ -29,6 +29,20 @@ class ObjectDetectionYolov2Model : public ObjectDetectionModel
 {
 public:
   ObjectDetectionYolov2Model(const std::string &, int, int, int);
+
+  bool fetchResults(
+    const std::shared_ptr<Engines::Engine>& engine,
+    std::vector<dynamic_vino_lib::ObjectDetectionResult>& result,
+    const bool& enable_roi_constraint = false) override;
+
+  bool enqueue(
+    const std::shared_ptr<Engines::Engine>& engine,
+    const cv::Mat & frame,
+    const cv::Rect & input_frame_loc) const override;
+
+  bool matToBlob(
+    const cv::Mat& orig_image, const cv::Rect&, float scale_factor, 
+    int batch_index, const std::shared_ptr<Engines::Engine>& engine) override;
   inline const std::string getInputName()
   {
     return input_;
@@ -50,6 +64,7 @@ public:
 protected:
   void checkLayerProperty(const InferenceEngine::CNNNetReader::Ptr &) override;
   void setLayerProperty(InferenceEngine::CNNNetReader::Ptr) override;
+  int getEntryIndex(int side, int lcoords, int lclasses, int location, int entry);
 
   std::string input_;
   std::string output_;

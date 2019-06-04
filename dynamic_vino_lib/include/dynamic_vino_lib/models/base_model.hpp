@@ -95,6 +95,13 @@ protected:
   virtual void setLayerProperty(InferenceEngine::CNNNetReader::Ptr network_reader) = 0;
   virtual void checkNetworkSize(int, int, InferenceEngine::CNNNetReader::Ptr);
   InferenceEngine::CNNNetReader::Ptr net_reader_;
+  void setFrameSize(const int& w, const int& h)
+  {
+    frame_size_.width = w; 
+    frame_size_.height = h;
+  }
+  cv::Size getFrameSize()
+  {return frame_size_;}
 
 private:
   friend class Engines::Engine;
@@ -104,6 +111,7 @@ private:
   int output_num_;
   int max_batch_size_;
   std::string model_loc_;
+  cv::Size frame_size_;
 };
 
 class ObjectDetectionModel : public BaseModel
@@ -112,7 +120,17 @@ class ObjectDetectionModel : public BaseModel
   ObjectDetectionModel(const std::string& a, int b, int c, int d);
   virtual inline const int getMaxProposalCount() { return max_proposal_count_; }
   virtual inline const int getObjectSize() { return object_size_; }
-
+  virtual bool fetchResults(
+    const std::shared_ptr<Engines::Engine>& engine,
+    std::vector<dynamic_vino_lib::ObjectDetectionResult>& result,
+    const bool& enable_roi_constraint = false);
+  virtual bool enqueue(
+    const std::shared_ptr<Engines::Engine>& engine,
+    const cv::Mat & frame,
+    const cv::Rect & input_frame_loc) const;
+  virtual bool matToBlob(
+    const cv::Mat& orig_image, const cv::Rect&, float scale_factor, 
+    int batch_index, const std::shared_ptr<Engines::Engine>& engine);
  protected:
   int max_proposal_count_;
   int object_size_;
