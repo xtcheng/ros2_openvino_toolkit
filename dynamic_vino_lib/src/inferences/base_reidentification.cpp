@@ -60,6 +60,19 @@ double dynamic_vino_lib::Tracker::findMostSimilarTrack(
   return max_similarity;
 }
 
+double dynamic_vino_lib::Tracker::findFirstSimilarTrack(
+  const std::vector<float> & feature, int & most_similar_id)
+{
+  most_similar_id = -1;
+  for (auto iter = recorded_tracks_.begin(); iter != recorded_tracks_.end(); iter++) {
+    double sim = calcSimilarity(feature, iter->second.feature);
+    if (sim > same_track_thresh_) {
+      most_similar_id = iter->first;
+      return sim;
+    }
+  }
+  return 0.0;
+}
 double dynamic_vino_lib::Tracker::calcSimilarity(
   const std::vector<float> & feature_a, const std::vector<float> & feature_b)
 {

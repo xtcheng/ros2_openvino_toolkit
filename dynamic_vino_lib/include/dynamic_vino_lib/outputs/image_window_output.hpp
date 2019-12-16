@@ -148,7 +148,21 @@ private:
   cv::Mat getRotationTransform(double yaw, double pitch, double roll);
 
   void mergeMask(const std::vector<dynamic_vino_lib::ObjectSegmentationResult> &);
+#define PERSON_ANALYSIS
+#ifdef PERSON_ANALYSIS
+  struct Person
+  {
+    std::string id;
+    cv::Rect roi;
+    int age;
+    bool isMale;
+  };
+  void updatePersonDB(const struct Person &);
+  void decoratePersonAnalysis();
+  std::string getTunedPersonID(const cv::Rect &, const std::string);
 
+  std::vector<Person> persons_;
+#endif
   struct OutputData
   {
     std::string desc;
@@ -160,6 +174,9 @@ private:
     cv::Point hp_zs;  // for headpose, start point of zAxis
     cv::Point hp_ze;  // for headpose, end point of zAxis
     std::vector<cv::Point> landmarks;
+#ifdef PERSON_ANALYSIS
+    Person person;
+#endif
   };
 
   std::vector<OutputData> outputs_;

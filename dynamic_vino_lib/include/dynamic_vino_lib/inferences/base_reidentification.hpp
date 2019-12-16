@@ -52,6 +52,13 @@ private:
    */
   double findMostSimilarTrack(const std::vector<float> & feature, int & most_similar_id);
   /**
+   * @brief Find the first similar track from the recorded tracks.
+   * @param[in] feature The input track's feature.
+   * @param[in] most similar track's ID to be recorded.
+   * @return similarity with the most similar track.
+   */
+  double findFirstSimilarTrack(const std::vector<float> & feature, int & most_similar_id);
+  /**
    * @brief Update the matched track's feature by the new track.
    * @param[in] track_id The matched track ID.
    * @param[in] feature The matched track's feature

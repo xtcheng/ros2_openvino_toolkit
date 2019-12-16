@@ -25,6 +25,7 @@
 
 #include "dynamic_vino_lib/outputs/image_window_output.hpp"
 #include "dynamic_vino_lib/pipeline.hpp"
+#include "dynamic_vino_lib/utils/calc.hpp"
 
 Outputs::ImageWindowOutput::ImageWindowOutput(const std::string & output_name, int focal_length)
 : BaseOutput(output_name), focal_length_(focal_length)
@@ -93,7 +94,13 @@ void Outputs::ImageWindowOutput::accept(
     cv::Rect result_rect = results[i].getLocation();
     unsigned target_index = findOutput(result_rect);
     outputs_[target_index].rect = result_rect;
-    outputs_[target_index].desc += "[" + results[i].getFaceID() + "]";
+    std::string id = results[i].getFaceID();
+#ifdef PERSON_ANALYSIS
+    id = getTunedPersonID(result_rect, results[i].getFaceID());
+    outputs_[target_index].person.id = id;
+    outputs_[target_index].person.roi = result_rect;
+#endif
+    outputs_[target_index].desc += "[" + id + "]";
   }
 }
 
@@ -242,10 +249,18 @@ void Outputs::ImageWindowOutput::accept(
     std::ostringstream ostream;
     ostream << "[Y" << std::fixed << std::setprecision(0) << results[i].getAge() << "]";
     outputs_[target_index].desc += ostream.str();
-
+#ifdef PERSON_ANALYSIS
+      outputs_[target_index].person.age = (int)(results[i].getAge());
+#endif
     auto male_prob = results[i].getMaleProbability();
+#ifdef PERSON_ANALYSIS
+    outputs_[target_index].person.isMale = true;
+#endif
     if (male_prob < 0.5) {
       outputs_[target_index].scalar = cv::Scalar(0, 0, 255);
+#ifdef PERSON_ANALYSIS
+      outputs_[target_index].person.isMale = false;
+#endif
     }
   }
 }
@@ -314,6 +329,7 @@ void Outputs::ImageWindowOutput::decorateFrame()
     cv::putText(frame_, ss.str(), cv::Point2f(0, 65), cv::FONT_HERSHEY_TRIPLEX, 0.5,
       cv::Scalar(255, 0, 0));
   }
+
   for (auto o : outputs_) {
     auto new_y = std::max(15, o.rect.y - 15);
     cv::putText(frame_, o.desc, cv::Point2f(o.rect.x, new_y), cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8,
@@ -332,9 +348,85 @@ void Outputs::ImageWindowOutput::decorateFrame()
     for (int i = 0; i < o.landmarks.size(); i++) {
       cv::circle(frame_, o.landmarks[i], 3, cv::Scalar(255, 0, 0), 2);
     }
+
+#ifdef PERSON_ANALYSIS
+    updatePersonDB(o.person);
+#endif
   }
+#ifdef PERSON_ANALYSIS
+    decoratePersonAnalysis();
+#endif
   outputs_.clear();
 }
+
+#ifdef PERSON_ANALYSIS
+void Outputs::ImageWindowOutput::updatePersonDB(const struct Outputs::ImageWindowOutput::Person & person)
+{
+  bool found = false;
+  if(person.id.empty()) {
+    return;
+  }
+  for (auto & p : persons_) {
+    if(person.id == p.id) {
+      p.age = p.age * 0.9 + person.age * 0.1;
+      found = true;
+    }
+  }
+
+  if(!found) {
+    persons_.push_back(person);
+  }
+}
+
+std::string Outputs::ImageWindowOutput::getTunedPersonID(const cv::Rect & box, const std::string default_id)
+{
+  double max_iou = 0.0;
+  int index = -1;
+  for(size_t i=0; i<persons_.size(); i++) {
+    auto iou = utils::iou(box, persons_[i].roi);
+    if (iou > max_iou) {
+      max_iou = iou;
+      index = i;
+    }
+  }
+  if(max_iou > 0.3) {
+    return persons_[index].id;
+  }
+
+  return default_id;
+}
+void Outputs::ImageWindowOutput::decoratePersonAnalysis()
+{
+  auto scalar = cv::Scalar(255, 0, 255);
+  std::string person_number = "Persons: " + std::to_string(persons_.size());
+  cv::putText(frame_, person_number, cv::Point2f(0, 85), cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, scalar);
+  std::map<int, int> age_state;
+  for(auto p : persons_){
+    int age = (p.age / 10) * 10;
+    if (age <= 0) continue;
+    if (age_state.find(age) != age_state.end()){
+      age_state[age] = age_state[age] + 1;
+    } else {
+      age_state[age] = 1;
+    }
+  }
+  std::string age_string = "Ages:";
+  for (auto it=age_state.begin(); it!=age_state.end(); ++it) {
+    age_string += " " + std::to_string(it->first) + "s=" + std::to_string(it->second);
+  }
+  cv::putText(frame_, age_string, cv::Point2f(0, 105), cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, scalar);
+
+  int males = 0;
+  for(auto p : persons_) {
+    if(p.isMale) {
+      males++;
+    }
+  }
+  std::string gender = "Gender: Males=" + std::to_string(males) + ", Females=" + 
+    std::to_string(persons_.size()-males);
+  cv::putText(frame_, gender, cv::Point2f(0, 125), cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, scalar);
+}
+#endif
 
 void Outputs::ImageWindowOutput::handleOutput()
 {
