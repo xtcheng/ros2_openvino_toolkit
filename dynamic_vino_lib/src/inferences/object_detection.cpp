@@ -70,10 +70,7 @@ bool dynamic_vino_lib::ObjectDetection::enqueue(
     return false;
   }
 
-  // nonsense!!
-  // Result r(input_frame_loc);
-  // results_.clear();
-  // results_.emplace_back(r);
+  frame_offset_ = input_frame_loc;
   enqueued_frames_ += 1;
   return true;
 }
@@ -87,8 +84,15 @@ bool dynamic_vino_lib::ObjectDetection::fetchResults()
 
   results_.clear();
 
-  return (valid_model_ != nullptr) && valid_model_->fetchResults(
+  bool fetched = (valid_model_ != nullptr) && valid_model_->fetchResults(
     getEngine(), results_, show_output_thresh_, enable_roi_constraint_);
+  if(fetched && (frame_offset_.x != 0 || frame_offset_.y != 0)){
+    for(size_t i=0; i<results_.size(); i++){
+      results_[i].addOffset(cv::Point2i(frame_offset_.x, frame_offset_.y));
+    }
+  }
+
+  return fetched;
 }
 
 int dynamic_vino_lib::ObjectDetection::getResultsLength() const

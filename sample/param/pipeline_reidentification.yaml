@@ -13,15 +13,30 @@ Pipelines:
       model: /opt/openvino_toolkit/models/person-reidentification/output/intel/person-reidentification-retail-0076/FP32/person-reidentification-retail-0076.xml
       engine: CPU
       label: to/be/set/xxx.labels
-      batch: 1
+      batch: 16
       confidence_threshold: 0.7
-  outputs: [ImageWindow, RViz, RosTopic]
+    - name: FaceDetection
+      model: /opt/openvino_toolkit/models/face_detection/output/intel/face-detection-adas-0001/FP16/face-detection-adas-0001.xml
+      engine: CPU
+      label: /opt/intel/openvino/deployment_tools/tools/model_downloader/Transportation/object_detection/face/pruned_mobilenet_reduced_ssd_shared_weights/dldt/face-detection-adas-0001.labels
+      batch: 1
+      confidence_threshold: 0.5
+    - name: AgeGenderRecognition
+      model: /opt/openvino_toolkit/models/age-gender-recognition/output/intel/age-gender-recognition-retail-0013/FP32/age-gender-recognition-retail-0013.xml
+      engine: CPU
+      label: to/be/set/xxx.labels
+      batch: 1
+  outputs: [ImageWindow]
   connects:
     - left: StandardCamera
       right: [ObjectDetection]
     - left: ObjectDetection
-      right: [PersonReidentification]
+      right: [PersonReidentification, FaceDetection]
     - left: PersonReidentification
-      right: [ImageWindow, RViz, RosTopic]
+      right: [ImageWindow]
+    - left: FaceDetection
+      right: [AgeGenderRecognition, ImageWindow]
+    - left: AgeGenderRecognition
+      right: [ImageWindow]
 
 OpenvinoCommon:

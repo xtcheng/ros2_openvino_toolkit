@@ -198,7 +198,7 @@ void Pipeline::runOnce()
   for (auto pos = next_.equal_range(input_device_name_); pos.first != pos.second; ++pos.first) {
     std::string detection_name = pos.first->second;
     auto detection_ptr = name_to_detection_map_[detection_name];
-    detection_ptr->enqueue(frame_, cv::Rect(width_ / 2, height_ / 2, width_, height_));
+    detection_ptr->enqueue(frame_, cv::Rect(0, 0, width_, height_));
     increaseInferenceCounter();
     detection_ptr->submitRequest();
   }

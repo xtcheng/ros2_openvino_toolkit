@@ -57,11 +57,24 @@ unsigned Outputs::ImageWindowOutput::findOutput(
       return i;
     }
   }
+
   OutputData output;
   output.desc = "";
   output.scalar = cv::Scalar(255, 0, 0);
   outputs_.push_back(output);
   return outputs_.size() - 1;
+}
+
+int Outputs::ImageWindowOutput::findOutputInRegion(
+  const cv::Rect & result_rect)
+{
+  for (int i = 0; i < outputs_.size(); i++) {
+    if((result_rect & outputs_[i].rect) == result_rect) {
+      return i;
+    }
+  }
+
+  return -1;
 }
 
 void Outputs::ImageWindowOutput::accept(
@@ -138,7 +151,16 @@ void Outputs::ImageWindowOutput::accept(
     cv::Rect result_rect = results[i].getLocation();
     unsigned target_index = findOutput(result_rect);
     outputs_[target_index].rect = result_rect;
-    outputs_[target_index].desc += "[" + results[i].getPersonID() + "]";
+    //outputs_[target_index].desc += "[" + results[i].getPersonID() + "]";
+    std::string id = results[i].getPersonID();
+#ifdef PERSON_ANALYSIS
+    id = getTunedPersonID(result_rect, results[i].getPersonID());
+    outputs_[target_index].person.id = id;
+    outputs_[target_index].person.roi = result_rect;
+    outputs_[target_index].person.age = 0;
+    outputs_[target_index].person.isMale = true;
+#endif
+    outputs_[target_index].desc += "[" + id + "]";
   }
 }
 
@@ -249,17 +271,24 @@ void Outputs::ImageWindowOutput::accept(
     std::ostringstream ostream;
     ostream << "[Y" << std::fixed << std::setprecision(0) << results[i].getAge() << "]";
     outputs_[target_index].desc += ostream.str();
-#ifdef PERSON_ANALYSIS
-      outputs_[target_index].person.age = (int)(results[i].getAge());
-#endif
     auto male_prob = results[i].getMaleProbability();
 #ifdef PERSON_ANALYSIS
+    int person_index = findOutputInRegion(result_rect);
+    outputs_[target_index].person.age = (int)(results[i].getAge());
+    //slog::info <<target_index<< ":age=" << outputs_[target_index].person.age << slog::endl;
     outputs_[target_index].person.isMale = true;
+    if(person_index >= 0) {
+      outputs_[person_index].person.age = (int)(results[i].getAge());
+      outputs_[person_index].person.isMale = true;
+    }
 #endif
     if (male_prob < 0.5) {
       outputs_[target_index].scalar = cv::Scalar(0, 0, 255);
 #ifdef PERSON_ANALYSIS
       outputs_[target_index].person.isMale = false;
+      if(person_index >= 0) {
+        outputs_[person_index].person.isMale = false;
+      }
 #endif
     }
   }
@@ -368,7 +397,10 @@ void Outputs::ImageWindowOutput::updatePersonDB(const struct Outputs::ImageWindo
   }
   for (auto & p : persons_) {
     if(person.id == p.id) {
-      p.age = p.age * 0.9 + person.age * 0.1;
+      if (p.age < 10) p.age = person.age;
+      if (person.age > 10)
+        p.age = p.age * 0.9 + person.age * 0.1;
+        p.isMale = person.isMale;
       found = true;
     }
   }
@@ -380,6 +412,7 @@ void Outputs::ImageWindowOutput::updatePersonDB(const struct Outputs::ImageWindo
 
 std::string Outputs::ImageWindowOutput::getTunedPersonID(const cv::Rect & box, const std::string default_id)
 {
+#if 0
   double max_iou = 0.0;
   int index = -1;
   for(size_t i=0; i<persons_.size(); i++) {
@@ -389,10 +422,10 @@ std::string Outputs::ImageWindowOutput::getTunedPersonID(const cv::Rect & box, c
       index = i;
     }
   }
-  if(max_iou > 0.3) {
+  if(max_iou > 0.5) {
     return persons_[index].id;
   }
-
+#endif
   return default_id;
 }
 void Outputs::ImageWindowOutput::decoratePersonAnalysis()
@@ -403,12 +436,14 @@ void Outputs::ImageWindowOutput::decoratePersonAnalysis()
   std::map<int, int> age_state;
   for(auto p : persons_){
     int age = (p.age / 10) * 10;
-    if (age <= 0) continue;
+    //slog::info << "Decorating: age=" << age <<"(should be:" << p.age <<slog::endl;
+    if (age <= 0 || age > 100) continue;
     if (age_state.find(age) != age_state.end()){
       age_state[age] = age_state[age] + 1;
     } else {
       age_state[age] = 1;
     }
+    
   }
   std::string age_string = "Ages:";
   for (auto it=age_state.begin(); it!=age_state.end(); ++it) {
@@ -425,6 +460,15 @@ void Outputs::ImageWindowOutput::decoratePersonAnalysis()
   std::string gender = "Gender: Males=" + std::to_string(males) + ", Females=" + 
     std::to_string(persons_.size()-males);
   cv::putText(frame_, gender, cv::Point2f(0, 125), cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, scalar);
+  int y = 140;
+  for(auto p : persons_){
+    std::string person;
+    person += p.id;
+    person += ":" + std::to_string(p.age);
+    person += (p.isMale?"M":"F");
+    cv::putText(frame_, person, cv::Point2f(0, y), cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, scalar);
+    y += 15;
+  }
 }
 #endif
 

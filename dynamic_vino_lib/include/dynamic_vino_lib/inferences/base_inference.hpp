@@ -77,6 +77,11 @@ class Result
 public:
   friend class BaseInference;
   explicit Result(const cv::Rect & location);
+  inline void addOffset(const cv::Point2i offset)
+  {
+    location_.x += offset.x;
+    location_.y += offset.y;
+  }
   inline const cv::Rect getLocation() const
   {
     return location_;
@@ -203,6 +208,7 @@ protected:
   std::shared_ptr<Engines::Engine> engine_ = nullptr;
   int max_batch_size_ = 1;
   int enqueued_frames_ = 0;
+  cv::Rect frame_offset_ ; //currently, only support 1 frame enqueued.
   bool results_fetched_ = false;
 };
 }  // namespace dynamic_vino_lib
