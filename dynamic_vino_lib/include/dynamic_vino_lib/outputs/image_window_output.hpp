@@ -155,6 +155,8 @@ private:
   {
     std::string id;
     cv::Rect roi;
+    std::string face_id;
+    cv::Rect face_roi;
     int age;
     bool isMale;
   };

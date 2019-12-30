@@ -110,8 +110,13 @@ void Outputs::ImageWindowOutput::accept(
     std::string id = results[i].getFaceID();
 #ifdef PERSON_ANALYSIS
     id = getTunedPersonID(result_rect, results[i].getFaceID());
-    outputs_[target_index].person.id = id;
-    outputs_[target_index].person.roi = result_rect;
+    outputs_[target_index].person.face_id = id;
+    outputs_[target_index].person.face_roi = result_rect;
+    int person_index = findOutputInRegion(result_rect);
+    if(person_index >= 0) {
+      outputs_[person_index].person.face_id = id;
+      outputs_[person_index].person.face_roi = result_rect;
+    }
 #endif
     outputs_[target_index].desc += "[" + id + "]";
   }
@@ -392,11 +397,11 @@ void Outputs::ImageWindowOutput::decorateFrame()
 void Outputs::ImageWindowOutput::updatePersonDB(const struct Outputs::ImageWindowOutput::Person & person)
 {
   bool found = false;
-  if(person.id.empty()) {
+  if(person.id.empty() || person.face_id.empty()) {
     return;
   }
   for (auto & p : persons_) {
-    if(person.id == p.id) {
+    if(person.id == p.id && person.face_id == p.face_id) {
       if (p.age < 10) p.age = person.age;
       if (person.age > 10)
         p.age = p.age * 0.9 + person.age * 0.1;
@@ -463,7 +468,7 @@ void Outputs::ImageWindowOutput::decoratePersonAnalysis()
   int y = 140;
   for(auto p : persons_){
     std::string person;
-    person += p.id;
+    person += p.id +"+" + p.face_id;
     person += ":" + std::to_string(p.age);
     person += (p.isMale?"M":"F");
     cv::putText(frame_, person, cv::Point2f(0, y), cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, scalar);
